@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>会议台签与座位图助手</title>
+  <style>
+    :root {
+      --blue: #1a5fb4;
+      --blue-light: #e8f0fe;
+      --border: #d8dee9;
+      --bg: #f6f7f9;
+      --text: #2e3440;
+      --muted: #7b8794;
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", "SimHei", sans-serif;
+      color: var(--text);
+      background: var(--bg)
+    }
+
+    header {
+      background: var(--blue);
+      color: #fff;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap
+    }
+
+    #app-ver:hover {
+      color: rgba(255, 255, 255, .95)
+    }
+
+    #ver-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999
+    }
+
+    #ver-modal.open {
+      display: flex
+    }
+
+    #ver-card {
+      background: #fff;
+      color: var(--text);
+      border-radius: 10px;
+      max-width: 560px;
+      width: 88vw;
+      max-height: 72vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .3)
+    }
+
+    #ver-card .vh {
+      display: flex;
+      align-items: center;
+      padding: 14px 18px 10px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    #ver-card .vh b {
+      font-size: 16px
+    }
+
+    #ver-card .vh button {
+      margin-left: auto;
+      border: none;
+      background: none;
+      font-size: 20px;
+      color: #999;
+      cursor: pointer;
+      padding: 0 4px
+    }
+
+    #ver-card .vb {
+      padding: 12px 18px 16px;
+      overflow: auto;
+      font-size: 13px;
+      line-height: 1.75;
+      white-space: pre-wrap
+    }
+
+    header h1 {
+      font-size: 20px;
+      margin: 0
+    }
+
+    header .design-by {
+      font-size: 11px;
+      opacity: .75;
+      font-style: italic;
+      line-height: 1.1;
+      display: flex;
+      gap: 4px;
+      align-items: baseline
+    }
+
+    header .ver-sep {
+      opacity: .5;
+      font-style: normal
+    }
+
+    #app-ver {
+      font-size: 10px;
+      font-style: normal;
+      color: rgba(255, 255, 255, .55);
+      cursor: pointer;
+      user-select: none;
+      letter-spacing: .5px
+    }
+
+    #app-ver:hover {
+      color: rgba(255, 255, 255, .95)
+    }
+
+    header .title-block {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+      align-self: center
+    }
+
+    header .banner-sep {
+      color: rgba(255, 255, 255, .45);
+      font-size: 20px;
+      align-self: center;
+      margin: 0 2px
+    }
+
+    header .banner-ops {
+      display: flex;
+      gap: 6px;
+      align-self: center
+    }
+
+    .banner-btn {
+      border: 1px solid rgba(255, 255, 255, .45);
+      background: rgba(255, 255, 255, .1);
+      color: #fff;
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 13.5px;
+      cursor: pointer;
+      white-space: nowrap
+    }
+
+    .banner-btn:disabled {
+      opacity: .35;
+      cursor: default
+    }
+
+    .banner-btn:hover {
+      background: rgba(255, 255, 255, .22)
+    }
+
+    .banner-btn .ic-e {
+      color: #8ce6ae;
+      font-size: 15px;
+      font-weight: 700;
+      margin-right: 2px
+    }
+
+    .banner-btn .ic-i {
+      color: #ffb066;
+      font-size: 15px;
+      font-weight: 700;
+      margin-right: 2px
+    }
+
+    header nav {
+      margin-left: auto;
+      display: flex;
+      gap: 4px
+    }
+
+    nav button {
+      border: none;
+      background: none;
+      padding: 8px 16px;
+      font-size: 15px;
+      cursor: pointer;
+      color: rgba(255, 255, 255, .75);
+      border-radius: 6px
+    }
+
+    nav button.active {
+      color: #fff;
+      background: rgba(255, 255, 255, .18);
+      font-weight: 600
+    }
+
+    main {
+      padding: 20px 24px;
+      max-width: 1200px;
+      margin: 0 auto
+    }
+
+    main.wide {
+      max-width: none
+    }
+
+    /* 座位示意图页全宽 */
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 16px
+    }
+
+    .card h2 {
+      font-size: 16px;
+      margin: 0 0 12px;
+      color: var(--blue)
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px
+    }
+
+    label {
+      font-size: 14px
+    }
+
+    select,
+    input[type=number],
+    input[type=text] {
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit
+    }
+
+    .btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 4px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer
+    }
+
+    .btn:hover {
+      opacity: .9
+    }
+
+    .btn.ghost {
+      background: #fff;
+      color: var(--blue);
+      border: 1px solid var(--blue)
+    }
+
+    .btn.small {
+      padding: 3px 10px;
+      font-size: 12px
+    }
+
+    .btn.danger {
+      background: #c01c28
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 14px
+    }
+
+    th,
+    td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left
+    }
+
+    th {
+      background: var(--blue-light)
+    }
+
+    #people-table tbody tr[data-id] {
+      cursor: grab
+    }
+
+    #people-table tbody tr.dragging {
+      opacity: .35;
+      background: #f0f4fa
+    }
+
+    #people-table tbody tr.drop-above {
+      box-shadow: inset 0 3px 0 0 var(--blue)
+    }
+
+    #people-table tbody tr.drop-below {
+      box-shadow: inset 0 -3px 0 0 var(--blue)
+    }
+
+    body.drag-active {
+      user-select: none;
+      -webkit-user-select: none
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7
+    }
+
+    .seat-layout {
+      display: flex;
+      gap: 16px;
+      align-items: stretch
+    }
+
+    .seat-canvas-wrap {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #eef0f4;
+      overflow: hidden;
+      height: 640px
+    }
+
+    .canvas-ops {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 6px;
+      z-index: 5
+    }
+
+    .canvas-ops button {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, .92);
+      color: #555;
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .12)
+    }
+
+    .canvas-ops button:hover:not(:disabled) {
+      background: #fff;
+      color: var(--blue)
+    }
+
+    .canvas-ops button:disabled {
+      opacity: .32;
+      cursor: default
+    }
+
+    #seat-canvas {
+      display: block;
+      touch-action: none;
+      cursor: grab
+    }
+
+    .seat-side {
+      width: 280px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: sticky;
+      top: 12px;
+      max-height: calc(100vh - 24px);
+      overflow: auto
+    }
+
+    .seat-side .card {
+      margin-bottom: 12px
+    }
+
+    .card.collapsible h2 {
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .card.collapsible h2::after {
+      content: "▾";
+      font-size: 11px;
+      color: var(--muted);
+      transition: transform .15s
+    }
+
+    .card.collapsible.collapsed h2::after {
+      transform: rotate(-90deg)
+    }
+
+    .card.collapsible.collapsed>*:not(h2) {
+      display: none
+    }
+
+    .card.collapsible.collapsed h2 {
+      margin-bottom: 0
+    }
+
+    .vchip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 3px 6px 3px 12px;
+      font-size: 13px;
+      background: #fff
+    }
+
+    .vchip b {
+      font-weight: 600
+    }
+
+    .vchip .kind {
+      font-size: 11px;
+      color: var(--muted)
+    }
+
+    .seat-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px
+    }
+
+    .seat-main .editor-card {
+      margin-bottom: 0
+    }
+
+    .seat-main .seat-canvas-wrap {
+      flex: 1;
+      min-height: 520px;
+      height: auto;
+      max-height: calc(100vh - 230px)
+    }
+
+    .venue-card #venue-lib {
+      max-height: 200px;
+      overflow: auto
+    }
+
+    .people-panel {
+      flex: 1
+    }
+
+    .people-panel .plist {
+      max-height: 300px;
+      overflow: auto
+    }
+
+    .pchip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border: 1px solid #e0e4ea;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      background: #fff;
+      user-select: none;
+      -webkit-user-select: none
+    }
+
+    .pchip.on {
+      border-color: #1a66ff;
+      background: #eef4ff
+    }
+
+    .pchip small {
+      color: #888;
+      font-size: 11px
+    }
+
+    .pchip.flash {
+      outline: 2px solid #f59e0b
+    }
+
+    .trow {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+      border-bottom: 1px dashed #e2e2e2;
+      flex-wrap: wrap
+    }
+
+    .trow:last-child {
+      border-bottom: none
+    }
+
+    .trow .no {
+      width: 52px
+    }
+
+    .trow .kind {
+      font-size: 12px;
+      color: #666;
+      width: 44px
+    }
+
+    .trow input[type=number] {
+      width: 54px
+    }
+
+    .trow .mini {
+      padding: 2px 7px;
+      font-size: 12px
+    }
+
+    .pitem {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-bottom: 1px solid #eef1f5;
+      cursor: pointer;
+      font-size: 14px
+    }
+
+    .pitem:hover {
+      background: var(--blue-light)
+    }
+
+    .pitem .no {
+      color: var(--muted);
+      font-size: 12px;
+      width: 22px
+    }
+
+    .pitem .nm {
+      flex: 1
+    }
+
+    .pitem .st {
+      font-size: 11px;
+      color: #fff;
+      border-radius: 3px;
+      padding: 1px 6px
+    }
+
+    .pitem .st.done {
+      background: #26a269
+    }
+
+    .pitem .st.todo {
+      background: #c0bfbc
+    }
+
+    .preview-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      background: #e6e8eb;
+      padding: 10px;
+      border-radius: 6px;
+      max-height: 420px
+    }
+
+    .drag-ghost {
+      position: fixed;
+      z-index: 999;
+      background: #1a5fb4;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      pointer-events: none;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, .3);
+      transform: translate(-50%, -140%);
+      white-space: nowrap
+    }
+
+    .pitem {
+      touch-action: none
+    }
+
+    #seat-svg rect[data-seat] {
+      touch-action: none
+    }
+
+    .hidden {
+      display: none
+    }
+
+    /* ===== 台签页（打印尺寸，A4 纵向 210x297mm） ===== */
+    .sheet {
+      width: 210mm;
+      height: 296mm;
+      background: #fff;
+      position: relative;
+      overflow: hidden;
+      margin: 0 auto
+    }
+
+    .std-frame {
+      width: 190mm;
+      height: 178mm;
+      border: 1px solid #000;
+      overflow: hidden;
+      position: relative
+    }
+
+    .std-half {
+      height: 89mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 6mm
+    }
+
+    /* 左右各空 6mm（打印机可打印区） */
+    /* 对折参考线：中间两侧各 10mm，中间留空避免压字 */
+    .std-frame::before,
+    .std-frame::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 10mm;
+      height: 0;
+      border-top: 1px solid #000
+    }
+
+    .std-frame::before {
+      left: 0
+    }
+
+    .std-frame::after {
+      right: 0
+    }
+
+    .std-half .inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center
+    }
+
+    .std-half .sign-name,
+    .fold-half .sign-name {
+      white-space: nowrap
+    }
+
+    /* 不换行：超宽横向溢出居中，绝不折行竖排 */
+    .std-half.rev {
+      transform: rotate(180deg)
+    }
+
+    .fold-half {
+      height: 148mm;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .fold-half .inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center
+    }
+
+    .fold-half.rev {
+      transform: rotate(180deg)
+    }
+
+    .sign-name {
+      line-height: 1;
+      font-weight: normal;
+      letter-spacing: 0;
+      color: #000
+    }
+
+    .sign-title {
+      font-size: 22pt;
+      color: #000;
+      margin-bottom: 10mm;
+      letter-spacing: .1em
+    }
+
+    .strip-row {
+      border-top: 1px dashed #bbb;
+      position: relative
+    }
+
+    .strip-row:first-child {
+      border-top: none
+    }
+
+    .strip-half {
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .strip-half .inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center
+    }
+
+    .strip-half.rev {
+      transform: rotate(180deg)
+    }
+
+    .preview-scale {
+      transform: scale(.32);
+      transform-origin: top left;
+      height: 280mm;
+      width: 210mm
+    }
+
+    .preview-holder {
+      width: 67mm;
+      height: 94mm;
+      overflow: hidden;
+      border: 1px solid #999;
+      margin: 0 auto
+    }
+
+    /* ===== 打印 ===== */
+    /* 平时隐藏但保持可测量（offsetWidth>0），供 scaleX 压缩前测宽 */
+    .person-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border: 1px solid #d0d7de;
+      border-radius: 12px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #9aa2ad;
+      background: #fafbfc
+    }
+
+    .person-chip.on {
+      color: #174ea6;
+      background: #eaf3ff;
+      border-color: #8ab4f8
+    }
+
+    #print-area {
+      position: fixed;
+      left: -10000px;
+      top: 0;
+      visibility: hidden
+    }
+
+    @media print {
+      body {
+        background: #fff
+      }
+
+      body.print-sign #app,
+      body.print-seat #app {
+        display: none !important
+      }
+
+      body.print-sign #print-area,
+      body.print-seat #print-area {
+        display: block !important;
+        position: static;
+        visibility: visible
+      }
+
+      .sheet {
+        page-break-after: always
+      }
+
+      .sheet:last-child {
+        page-break-after: auto
+      }
+    }
+  </style>
+  <style id="page-style">
+    @page {
+      size: A4 portrait;
+      margin: 0
+    }
+  </style>
+  <link rel="stylesheet" href="fonts/xinwei.css">
+</head>
+
+<body>
+  <div id="app">
+    <header>
+      <div class="title-block">
+        <h1>会议台签与座位图助手</h1>
+        <span class="design-by"><span id="app-ver" title="查看更新记录">v0.1.8</span><span
+            class="ver-sep">｜</span><span>design by layla</span></span>
+      </div>
+      <nav>
+        <button data-tab="list" class="active">① 名单</button>
+        <button data-tab="sign">② 台签打印</button>
+        <button data-tab="seat">③ 座位示意图</button>
+      </nav>
+      <span class="banner-sep">｜</span>
+      <div class="banner-ops">
+        <button class="banner-btn" id="btn-export-venue" title="把名单、会场布局、排座、会议室库导出为 JSON 文件备份"><b class="ic-e">↓</b>
+          导出备份</button>
+        <button class="banner-btn" id="btn-import-venue" title="从备份 JSON 文件恢复名单、会场与会议室库"><b class="ic-i">↑</b>
+          导入备份</button>
+        <button class="banner-btn" id="btn-reset" title="台签/座位设置与排座恢复默认（名单保留）">↺ 恢复默认</button>
+      </div>
+      <input type="file" id="venue-json-file" accept=".json,application/json" style="display:none">
+    </header>
+    <main>
+
+      <!-- 名单 -->
+      <section id="tab-list">
+        <div class="card">
+          <h2>批量导入名单</h2>
+          <p class="hint">每行一人。可只写姓名，或用「姓名｜职务」「姓名,职务」「姓名（空格/tab）职务」同时录入职务。<br>
+            例：<code>张三｜党工委书记</code> 或 <code>李四</code></p>
+          <textarea id="import-text" placeholder="张三｜党工委书记&#10;李四｜办事处主任&#10;王五"></textarea>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="btn-import-append">追加导入</button>
+            <button class="btn ghost" id="btn-import-replace">替换全部</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>名单（从上到下即礼宾次序，请按序排列）</h2>
+          <table id="people-table">
+            <thead>
+              <tr>
+                <th style="width:50px">次序</th>
+                <th style="width:120px">姓名</th>
+                <th>职务</th>
+                <th style="width:170px">操作</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="row" style="margin-top:10px">
+            <button class="btn small ghost" id="btn-clear-people">清空名单</button>
+            <span class="hint">按住行上下拖拽调整顺序（也可用 ↑↓）；台签打印顺序、座位自动排位都以此顺序为准。</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 台签 -->
+      <section id="tab-sign" class="hidden">
+        <div class="card">
+          <h2>台签设置</h2>
+          <div class="row">
+            <label>样式
+              <select id="sign-mode">
+                <option value="standard" selected>标准模版（190×178mm 方框，上下布局）</option>
+                <option value="fold">对折大台签（1 人 / 页，A4 纵向对折）</option>
+                <option value="strip">紧凑小台签（裁切条，对折立放）</option>
+              </select>
+            </label>
+            <label id="perpage-label" class="hidden">每页条数 <input type="number" id="sign-perpage" min="2" max="8"
+                value="4" style="width:60px"></label>
+            <label>字体
+              <select id="sign-font">
+                <option value='xinwei'>华文新魏</option>
+                <option value='stkai'>华文楷体</option>
+                <option value='hei'>黑体</option>
+                <option value='song'>宋体</option>
+                <option value='kai'>楷体</option>
+                <option value='custom'>自定义字体…</option>
+              </select>
+            </label>
+            <label id="customfont-label" class="hidden">字体名 <input type="text" id="sign-customfont"
+                placeholder="如 楷体、LXGW WenKai" style="width:150px"></label>
+            <label>字号(pt) <input type="number" id="sign-size" min="0" max="400" value="0" style="width:70px"></label>
+            <label><input type="checkbox" id="sign-show-title"> 名字上方显示职务小字</label>
+            <label><input type="checkbox" id="sign-bold"> 加粗</label>
+          </div>
+          <p class="hint">标准模版：内容限制在 190×178mm 方框内（A4 居中），上半倒转 + 下半正向（对折立放后两面均正向），默认华文新魏 <b>155
+              号</b>（所有名字字号统一，超宽自动横向压缩不换行），沿方框上下对折立放。字体可选华文新魏 / 黑体 / 宋体 / 楷体 / 华文楷体，或选「自定义字体…」输入本机已安装的任意字体名。<br>
+            对折大台签：A4 纵向打印后沿中线对折，立放于桌面，正反两面均可读。紧凑小台签：按虚线裁切后逐条对折。字号填 0 时按模版默认（标准 155pt），也可手动指定。</p>
+        </div>
+        <div class="card">
+          <h2>打印人员</h2>
+          <div class="row" style="align-items:center;gap:8px;margin-bottom:8px">
+            <button class="btn ghost" id="btn-sign-all">全选</button>
+            <button class="btn ghost" id="btn-sign-none">全不选</button>
+            <span class="hint" id="sign-selected-hint"></span>
+          </div>
+          <div id="sign-person-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+        <div class="card">
+          <h2>首页预览</h2>
+          <div class="preview-wrap">
+            <div class="preview-holder">
+              <div id="sign-preview"></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn" id="btn-print-sign">🖨 打印台签（已选人员）</button>
+        </div>
+      </section>
+
+      <!-- 座位图 -->
+      <section id="tab-seat" class="hidden">
+        <div class="seat-layout">
+          <div class="seat-main">
+            <div class="card editor-card">
+              <h2>会场编辑</h2>
+              <div class="row">
+                <button class="btn" id="btn-add-long">＋ 长条桌</button>
+                <button class="btn" id="btn-add-round">＋ 圆桌</button>
+                <button class="btn" id="btn-add-podium">＋ 主席台</button>
+                <span style="width:14px"></span>
+                <button class="btn ghost" id="btn-zoom-out">➖</button>
+                <span id="zoom-label" style="min-width:48px;text-align:center">100%</span>
+                <button class="btn ghost" id="btn-zoom-in">➕</button>
+                <button class="btn ghost" id="btn-zoom-fit">⤢ 适应</button>
+                <label><input type="checkbox" id="seat-show-no" checked> 礼宾序号</label>
+                <span style="width:14px"></span>
+                <button class="btn" id="btn-auto-seat">⚡ 按名单顺序一键排座</button>
+                <button class="btn ghost" id="btn-clear-seat">清空座位</button>
+                <button class="btn" id="btn-print-seat">🖨 打印示意图</button>
+                <button class="btn ghost" id="btn-export-png">导出 PNG</button>
+              </div>
+              <p class="hint">桌型三种：长条桌（对坐）、圆桌、主席台。<b>拖动桌子</b>调整位置，选中桌子后在「桌子属性」里调座位数 / 旋转 / 翻转；滚轮缩放，拖空白平移。<br>
+                排座：<b>点击名单即自动指派到第一个空位</b>（或先点座位再点名单指定座位）；<b>把右侧名单中的人拖到座位上</b>即指派；<b>拖座位上的人</b>到另一座位为移动（两人互换）；拖到空白处撤销；双击座位清空；<b>右键座位
+                  = 禁用/恢复</b>（灰色斜纹座不参与排座）。序号规则：1 号位居中，2 号位在 1 号领导左手侧（图面右侧），依次向两侧展开，可用每桌「翻转」切换朝向。<br>
+                <b>导出/导入备份</b>（banner 右上角）：把当前会场布局、排座、名单和会议室库存成文件备用或换电脑使用；导入后自动保存在浏览器里（刷新不丢）。「恢复默认」重置台签/座位设置（名单保留）。
+              </p>
+            </div>
+            <div class="seat-canvas-wrap"><canvas id="seat-canvas"></canvas>
+              <div class="canvas-ops">
+                <button id="btn-undo" title="撤销（Ctrl/Cmd+Z）" disabled>↶</button>
+                <button id="btn-redo" title="重做（Ctrl/Cmd+Shift+Z）" disabled>↷</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="seat-side">
+            <div class="card collapsible venue-card" data-col="venue">
+              <h2>会议室管理</h2>
+              <div class="row" style="flex-wrap:wrap;margin-bottom:6px">
+                <input type="text" id="venue-name-input" placeholder="会议室名称，如：三楼大会议室" style="flex:1;min-width:130px">
+                <button class="btn" id="btn-save-venue">💾 保存为会议室</button>
+              </div>
+              <p class="hint" style="margin:0 0 4px">保存当前桌子布局（不含名单与排座），换会议直接载入重排。</p>
+              <div id="venue-lib"></div>
+            </div>
+            <div class="card collapsible" data-col="tableprop">
+              <h2>桌子属性</h2>
+              <div id="table-prop">
+                <p class="hint">点击画布中的桌子选中。</p>
+              </div>
+            </div>
+            <div class="card collapsible" data-col="tables">
+              <h2>桌子管理（编号顺序）<span style="flex:1"></span>
+                <button class="btn mini danger" id="btn-clear-tables" style="padding:1px 3px">全清</button>
+              </h2>
+              <div id="table-form">
+                <p class="hint">尚未添加桌子。</p>
+              </div>
+            </div>
+            <div class="card collapsible people-panel" data-col="people">
+              <h2>名单（点击/拖拽指派）</h2>
+              <div class="plist" id="seat-people"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+  <div id="print-area"></div>
+  <div id="ver-modal">
+    <div id="ver-card">
+      <div class="vh"><b>更新记录</b><button id="ver-close" title="关闭">×</button></div>
+      <div class="vb" id="ver-log"></div>
+    </div>
+  </div>
+
+  <script>
+    /* ================= 状态 ================= */
+    const LS_KEY = 'meeting-signs-v4';
+    let state = {
+      people: [],                 // {id,name,title}
+      sign: { mode: 'standard', perPage: 4, size: 0, font: 'xinwei', customFont: '', showTitle: false, bold: false, excluded: [] },
+      venue: { tables: [], assign: {}, disabled: [], sel: null, selSeat: null, showNo: true, zoom: 1, view: { x: 40, y: 30 } }, // 2.0 自由布局会场（disabled=禁用座位 key）
+      selectedSeat: null
+    };
+    let nextPid = 1;
+    /* ---- 撤销/重做：状态快照栈（save 时若有变化，把前一版压栈；新操作清空重做栈） ---- */
+    const UNDO_MAX = 50;
+    let undoStack = [], redoStack = [], lastSnap = null;
+    function stateJSON() { return JSON.stringify({ people: state.people, sign: state.sign, venue: state.venue, nextPid }) }
+    function updateUndoBtn() {
+      const u = document.getElementById('btn-undo'), r = document.getElementById('btn-redo');
+      if (u) u.disabled = !undoStack.length;
+      if (r) r.disabled = !redoStack.length;
+    }
+    function save() {
+      const now = stateJSON();
+      if (lastSnap !== null && now !== lastSnap) { undoStack.push(lastSnap); redoStack = []; if (undoStack.length > UNDO_MAX) undoStack.shift() }
+      lastSnap = now; updateUndoBtn();
+      try { localStorage.setItem(LS_KEY, now) } catch (e) { }
+    }
+    function applyState(json) {
+      const d = JSON.parse(json);
+      state.people = d.people; nextPid = d.nextPid || 1;
+      Object.assign(state.sign, d.sign || {}); state.venue = d.venue;
+      state.selectedSeat = null;
+      lastSnap = stateJSON();
+      try { localStorage.setItem(LS_KEY, lastSnap) } catch (e) { }
+      updateUndoBtn();
+      syncUI();
+      renderPeopleTable(); renderSeatPeople(); renderTableProp(); renderTableForm(); renderSeat(); renderSignPreview(); renderSignChips();
+    }
+    function undo() { if (!undoStack.length) return; const cur = stateJSON(); redoStack.push(cur); applyState(undoStack.pop()) }
+    function redo() { if (!redoStack.length) return; const cur = stateJSON(); undoStack.push(cur); applyState(redoStack.pop()) }
+    function load() {
+      try {
+        const v4 = localStorage.getItem(LS_KEY), v3 = localStorage.getItem('meeting-signs-v3'), v2 = localStorage.getItem('meeting-signs-v2'), v1 = localStorage.getItem('meeting-signs-v1');
+        const d = JSON.parse(v4 || v3 || v2 || v1);
+        if (d && d.people) {
+          state.people = d.people; nextPid = d.nextPid || d.people.length + 1;
+          if (v4) { Object.assign(state.sign, d.sign || {}); Object.assign(state.venue, d.venue || {}) }   // v4：正常恢复
+          else if (v3) Object.assign(state.sign, d.sign || {});   // v3 及更早：保留名单与台签设置，会场 2.0 重新开始
+        }
+      } catch (e) { }
+    }
+    const uid = () => 'p' + (nextPid++);
+
+    /* ================= Tab 切换 ================= */
+    document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+      ['list', 'sign', 'seat'].forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
+      document.querySelector('main').classList.toggle('wide', b.dataset.tab === 'seat');
+      if (b.dataset.tab === 'sign') renderSignPreview();
+      if (b.dataset.tab === 'seat') requestAnimationFrame(renderSeat);   // 等布局完成后再量 canvas 尺寸
+    }));
+
+    /* ================= 名单 ================= */
+    function parseLine(line) {
+      line = line.trim(); if (!line) return null;
+      let name = '', title = '';
+      const m = line.match(/^([^｜|,，\t]+)(?:[｜|,，\t]+(.*))?$/);
+      name = (m[1] || '').trim(); title = (m[2] || '').trim();
+      return { id: uid(), name, title };
+    }
+    function importPeople(replace) {
+      const lines = document.getElementById('import-text').value.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      if (!lines.length) { alert('请先输入名单'); return }
+      const np = lines.map(parseLine).filter(Boolean);
+      state.people = replace ? np : state.people.concat(np);
+      document.getElementById('import-text').value = '';
+      save(); renderPeopleTable(); renderSeatPeople();
+    }
+    document.getElementById('btn-import-append').onclick = () => importPeople(false);
+    document.getElementById('btn-import-replace').onclick = () => importPeople(true);
+    document.getElementById('btn-clear-people').onclick = () => { if (confirm('确定清空全部名单？')) { state.people = []; state.venue.assign = {}; save(); renderPeopleTable(); renderSeatPeople(); renderSeat() } };
+
+    function renderPeopleTable() {
+      const tb = document.querySelector('#people-table tbody'); tb.innerHTML = '';
+      state.people.forEach((p, i) => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = p.id;
+        tr.innerHTML = `<td>${i + 1}</td><td>${esc(p.name)}</td><td>${esc(p.title || '')}</td>
+      <td>
+        <button class="btn small ghost" data-act="up" data-id="${p.id}" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn small ghost" data-act="down" data-id="${p.id}" ${i === state.people.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn small danger" data-act="del" data-id="${p.id}">删</button>
+      </td>`;
+        tb.appendChild(tr);
+      });
+      if (!state.people.length) tb.innerHTML = '<tr><td colspan="4" style="color:#999">（暂无名单，请先导入）</td></tr>';
+      if (typeof renderSignChips === 'function') renderSignChips();   // 名单变化同步打印人员勾选
+    }
+    document.querySelector('#people-table tbody').addEventListener('click', e => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      const id = btn.dataset.id, i = state.people.findIndex(p => p.id === id); if (i < 0) return;
+      if (btn.dataset.act === 'up') [state.people[i - 1], state.people[i]] = [state.people[i], state.people[i - 1]];
+      if (btn.dataset.act === 'down') [state.people[i + 1], state.people[i]] = [state.people[i], state.people[i + 1]];
+      if (btn.dataset.act === 'del') { state.people.splice(i, 1); for (const k in state.venue.assign) if (state.venue.assign[k] === id) delete state.venue.assign[k]; }
+      save(); renderPeopleTable(); renderSeatPeople(); renderSeat();
+    });
+
+    /* ---- 名单拖拽排序（pointer 事件，桌面 + 触屏通用） ---- */
+    let drag = null, dropTarget = null;
+    function movePerson(dragId, targetId, pos) { // pos: 'before'|'after'
+      const from = state.people.findIndex(p => p.id === dragId);
+      if (from < 0) return;
+      const [item] = state.people.splice(from, 1);
+      let to = state.people.findIndex(p => p.id === targetId);
+      if (to < 0) { state.people.splice(from, 0, item); return }
+      if (pos === 'after') to++;
+      state.people.splice(to, 0, item);
+    }
+    function clearIndicators() {
+      document.querySelectorAll('#people-table tbody tr').forEach(tr => tr.classList.remove('drop-above', 'drop-below'));
+    }
+    document.querySelector('#people-table tbody').addEventListener('pointerdown', e => {
+      if (e.target.closest('button')) return;             // 按钮列正常点击
+      const tr = e.target.closest('tr[data-id]');
+      if (!tr) return;
+      drag = { id: tr.dataset.id, startY: e.clientY, started: false, tr };
+      e.preventDefault();                                // 防止拖出选中文本
+    });
+    document.addEventListener('pointermove', e => {
+      if (!drag) return;
+      if (!drag.started) {
+        if (Math.abs(e.clientY - drag.startY) < 6) return;     // 移动超过 6px 才视为拖拽
+        drag.started = true;
+        drag.tr.classList.add('dragging');
+        document.body.classList.add('drag-active');
+        if (navigator.vibrate) try { navigator.vibrate(10) } catch (_) { }
+      }
+      e.preventDefault();
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const tr = el && el.closest ? el.closest('#people-table tbody tr[data-id]') : null;
+      clearIndicators();
+      if (tr && tr.dataset.id !== drag.id) {
+        const rect = tr.getBoundingClientRect();
+        const below = e.clientY > rect.top + rect.height / 2;
+        tr.classList.add(below ? 'drop-below' : 'drop-above');
+        dropTarget = { id: tr.dataset.id, pos: below ? 'after' : 'before' };
+      } else dropTarget = null;
+    });
+    document.addEventListener('pointerup', () => {
+      if (!drag) return;
+      if (drag.started && dropTarget) {
+        movePerson(drag.id, dropTarget.id, dropTarget.pos);
+        save(); renderPeopleTable(); renderSeatPeople(); renderSeat();
+      }
+      drag.tr.classList.remove('dragging');
+      document.body.classList.remove('drag-active');
+      clearIndicators();
+      drag = null; dropTarget = null;
+    });
+    document.addEventListener('pointercancel', () => {
+      if (!drag) return;
+      drag.tr.classList.remove('dragging');
+      document.body.classList.remove('drag-active');
+      clearIndicators();
+      drag = null; dropTarget = null;
+    });
+
+    /* ================= 台签 ================= */
+    const FONTS = {
+      xinwei: "'STXinwei','华文新魏','XinWei',serif",
+      hei: "'SimHei','Heiti SC','Source Han Sans SC','PingFang SC',sans-serif",
+      song: "'SimSun','Songti SC',serif",
+      kai: "'KaiTi','Kaiti SC','STKaiti',serif",
+      stkai: "'STKaiti','华文楷体','Kaiti SC','KaiTi',serif"
+    };
+    function signFont(cfg) { // 自定义字体：直接使用输入的 font-family 名；为空回退华文新魏
+      if (cfg.font === 'custom') return cfg.customFont && cfg.customFont.trim() ? cfg.customFont.trim() : FONTS.xinwei;
+      return FONTS[cfg.font] || FONTS.xinwei;
+    }
+    function autoFontSize(len, mode, perPage) {
+      if (mode === 'standard') return 155;                         // 标准模版固定 155pt（超宽自动 scaleX 横向压缩，不换行）
+      if (mode === 'fold') return len <= 2 ? 250 : len === 3 ? 220 : len === 4 ? 180 : len === 5 ? 150 : len === 6 ? 125 : 105;
+      const stripH = 297 / perPage;                       // mm
+      const base = Math.round(stripH * 0.42 * 2.835);       // mm→pt
+      const k = len <= 2 ? 1 : len === 3 ? .88 : len === 4 ? .74 : len === 5 ? .6 : .5;
+      return Math.round(base * k);
+    }
+    function signHTML() {
+      const cfg = state.sign;
+      const font = signFont(cfg);
+      const ppl = state.people.filter(p => !cfg.excluded.includes(p.id));  // 勾选的打印人员
+      const mk = (p) => {
+        const label = p.name.length === 2 ? p.name[0] + '　' + p.name[1] : p.name;  // 2字名中间加全角空格
+        const size = cfg.size > 0 ? cfg.size : autoFontSize(label.length, cfg.mode, cfg.perPage);
+        const titleSize = cfg.mode === 'standard' ? Math.round(size * .22) + 'pt' : '';
+        const inner = `<div class="inner">${cfg.showTitle && p.title ? `<div class="sign-title"${titleSize ? ` style="font-size:${titleSize}"` : ''}>${esc(p.title)}</div>` : ''}<div class="sign-name" style="font-family:${font};font-size:${size}pt;font-weight:${cfg.bold ? 700 : 400}">${esc(label)}</div></div>`;
+        if (cfg.mode === 'standard') return `<div class="sheet"><div class="std-frame"><div class="std-half rev">${inner}</div><div class="std-half">${inner}</div></div></div>`;
+        if (cfg.mode === 'fold') return `<div class="sheet"><div class="fold-half rev">${inner}</div><div class="fold-half">${inner}</div></div>`;
+        const rowH = (296 / cfg.perPage).toFixed(2), halfH = (148 / cfg.perPage).toFixed(2);
+        return `<div class="strip-row" style="height:${rowH}mm"><div class="strip-half rev" style="height:${halfH}mm">${inner}</div><div class="strip-half" style="height:${halfH}mm">${inner}</div></div>`;
+      };
+      if (cfg.mode === 'fold') return ppl.map(mk).join('');
+      if (cfg.mode === 'standard') return ppl.map(mk).join('');
+      const pages = Math.ceil(ppl.length / cfg.perPage);
+      let out = '';
+      for (let i = 0; i < pages; i++) {
+        let inner = '';
+        for (let j = 0; j < cfg.perPage; j++) { const p = ppl[i * cfg.perPage + j]; if (p) { const lb = p.name.length === 2 ? p.name[0] + '　' + p.name[1] : p.name; const size = cfg.size > 0 ? cfg.size : autoFontSize(lb.length, cfg.mode, cfg.perPage); const f = signFont(cfg); const in2 = `<div class="inner">${cfg.showTitle && p.title ? `<div class="sign-title" style="font-size:${Math.round(size * .22)}pt">${esc(p.title)}</div>` : ''}<div class="sign-name" style="font-family:${f};font-size:${size}pt;font-weight:${cfg.bold ? 700 : 400}">${esc(lb)}</div></div>`; const rowH = (296 / cfg.perPage).toFixed(2), halfH = (148 / cfg.perPage).toFixed(2); inner += `<div class="strip-row" style="height:${rowH}mm"><div class="strip-half rev" style="height:${halfH}mm">${in2}</div><div class="strip-half" style="height:${halfH}mm">${in2}</div></div>`; } }
+        out += `<div class="sheet">${inner}</div>`;
+      }
+      return out;
+    }
+    /* 横向压缩：名字超宽时不换行，scaleX 压扁到框内（同 Word 艺术字横向缩放，字高不变） */
+    function applySquash(root) {
+      const frame = root.querySelector('.std-frame');
+      if (!frame) return;
+      const avail = frame.offsetWidth - 75.59;  // 左右各缩进 10mm（10mm=37.795px @96dpi）
+      root.querySelectorAll('.std-half .sign-name').forEach(el => {
+        el.style.transform = '';
+        el.style.transformOrigin = 'center center';
+        const w = el.offsetWidth;          // nowrap 下即单行自然宽（布局尺寸，不受祖先 transform 影响）
+        if (w > avail) el.style.transform = `scaleX(${(avail / w).toFixed(4)})`;
+      });
+    }
+    function renderSignPreview() {
+      const holder = document.getElementById('sign-preview');
+      if (!state.people.length) { holder.innerHTML = '<p class="hint" style="padding:20px">请先在「名单」页导入人员。</p>'; return }
+      const sel = state.people.filter(p => !state.sign.excluded.includes(p.id));
+      if (!sel.length) { holder.innerHTML = '<p class="hint" style="padding:20px">未勾选任何打印人员，请在上方「打印人员」中勾选。</p>'; return }
+      holder.innerHTML = `<div class="preview-scale">${signHTML()}</div>`;
+      applySquash(holder);
+    }
+    function printSigns() {
+      const sel = state.people.filter(p => !state.sign.excluded.includes(p.id));
+      if (!state.people.length) { alert('名单为空'); return }
+      if (!sel.length) { alert('未勾选打印人员'); return }
+      const pa = document.getElementById('print-area');
+      pa.innerHTML = signHTML();
+      applySquash(pa);
+      document.getElementById('page-style').textContent = '@page{size:A4 portrait;margin:0}';
+      document.body.classList.remove('print-seat'); document.body.classList.add('print-sign');
+      window.print();
+    }
+    document.getElementById('btn-print-sign').onclick = printSigns;
+    /* ===== 打印人员勾选 ===== */
+    function renderSignChips() {
+      const box = document.getElementById('sign-person-chips'), ex = state.sign.excluded;
+      box.innerHTML = state.people.map(p => `<label class="person-chip${ex.includes(p.id) ? '' : ' on'}"><input type="checkbox" data-pid="${p.id}"${ex.includes(p.id) ? '' : ' checked'}>${esc(p.name)}</label>`).join('') || '<span class="hint">名单为空</span>';
+      updateSignHint();
+    }
+    function updateSignHint() {
+      const el = document.getElementById('sign-selected-hint');
+      if (el) el.textContent = `已选 ${state.people.length - state.sign.excluded.length}/${state.people.length} 人`;
+    }
+    document.getElementById('sign-person-chips').addEventListener('change', e => {
+      const pid = e.target.dataset.pid; if (!pid) return;
+      if (e.target.checked) state.sign.excluded = state.sign.excluded.filter(x => x !== pid);
+      else if (!state.sign.excluded.includes(pid)) state.sign.excluded.push(pid);
+      e.target.closest('.person-chip').classList.toggle('on', e.target.checked);
+      save(); updateSignHint(); renderSignPreview();
+    });
+    document.getElementById('btn-sign-all').onclick = () => { state.sign.excluded = []; save(); renderSignChips(); renderSignPreview() };
+    document.getElementById('btn-sign-none').onclick = () => { state.sign.excluded = state.people.map(p => p.id); save(); renderSignChips(); renderSignPreview() };
+    ['sign-mode', 'sign-perpage', 'sign-size', 'sign-font', 'sign-customfont', 'sign-show-title', 'sign-bold'].forEach(id => {
+      const el = document.getElementById(id), evt = (id === 'sign-mode' || id === 'sign-font') ? 'change' : 'input';
+      el.addEventListener(evt, () => {
+        state.sign.mode = document.getElementById('sign-mode').value;
+        state.sign.perPage = clamp(+document.getElementById('sign-perpage').value || 4, 2, 8);
+        state.sign.size = clamp(+document.getElementById('sign-size').value || 0, 0, 400);
+        state.sign.font = document.getElementById('sign-font').value;
+        state.sign.customFont = document.getElementById('sign-customfont').value;
+        state.sign.showTitle = document.getElementById('sign-show-title').checked;
+        state.sign.bold = document.getElementById('sign-bold').checked;
+        document.getElementById('perpage-label').classList.toggle('hidden', state.sign.mode !== 'strip');
+        document.getElementById('customfont-label').classList.toggle('hidden', state.sign.font !== 'custom');
+        save(); renderSignPreview();
+      });
+    });
+    function clamp(v, a, b) { return Math.min(b, Math.max(a, v)) }
+
+    /* ================= 座位图 2.0（canvas 自由布局） ================= */
+    function courtesyOrder(n, mirror) { // 返回位置索引数组，第 0 个 = 1 号位；mirror=true：1 号位不变，2 号换到另一侧
+      const res = [];
+      if (n % 2 === 1) {
+        const c = (n - 1) / 2; for (let k = 0; k < n; k++) {
+          if (k === 0) res.push(c);
+          else if (k % 2 === 1) res.push(mirror ? c - (k + 1) / 2 : c + (k + 1) / 2);
+          else res.push(mirror ? c + k / 2 : c - k / 2);
+        }
+      }
+      else {
+        const a = n / 2 - 1, b = n / 2;
+        if (!mirror) { for (let k = 0; k < n; k++) { if (k % 2 === 0) res.push(a - k / 2); else res.push(b + (k - 1) / 2) } }
+        else {
+          res.push(a); let left = a - 1, right = b, useLeft = true;
+          for (let k = 1; k < n; k++) {
+            if (useLeft && left >= 0) res.push(left--);
+            else res.push(right++);
+            useLeft = !useLeft;
+          }
+        }
+      }
+      return res;
+    }
+    function ringOrder(n, mirror) { // 圆桌：0=主位(底部中央)，先顺时针邻位，再逆时针交替
+      const res = [0]; let l = 1, r = n - 1;
+      while (res.length < n) { res.push(l++); if (res.length < n) res.push(r--) }
+      return mirror ? res.map(p => (n - p) % n) : res;
+    }
+
+    /* ---- 几何：桌子局部坐标（中心原点，未旋转，mm） ---- */
+    const V = { SEAT_W: 36, SEAT_H: 15, GAP: 4.2, DESK_LONG_H: 45, DESK_PODIUM_H: 30, PXM: 3.7795 };
+    function tableGeom(t) { // -> {seats:[{key,i,side,x,y,w,h}], desk:{w,h}|{r}, deskNo 文字位置}
+      const seats = [], fx = x => t.flip ? -x : x;
+      if (t.kind === 'round') {
+        const n = t.seatsA, R = 14 + 4 * n;
+        const cw = Math.min(V.SEAT_W, 2 * Math.PI * (R + 15) / n - 3);
+        for (let i = 0; i < n; i++) {
+          const ang = (90 + i * 360 / n) * Math.PI / 180;
+          seats.push({ key: t.id + ':r:' + i, i, side: 'r', x: fx((R + 15) * Math.cos(ang)), y: (R + 15) * Math.sin(ang), w: cw, h: V.SEAT_H, ang: 90 + i * 360 / n })
+        }
+        return { seats, desk: { r: R } };
+      }
+      if (t.kind === 'podium') {
+        const n = t.seatsA, w = n * (V.SEAT_W + V.GAP) - V.GAP + 16, dw = w, dh = V.DESK_PODIUM_H;
+        for (let i = 0; i < n; i++)seats.push({ key: t.id + ':p:' + i, i, side: 'p', x: fx(-(w - 16) / 2 + V.SEAT_W / 2 + i * (V.SEAT_W + V.GAP)), y: -(dh / 2 + 15), w: V.SEAT_W, h: V.SEAT_H });
+        return { seats, desk: { w: dw, h: dh } };
+      }
+      // long：上侧 seatsA / 下侧 seatsB 对坐 + 左右端面 seatsL/seatsR（各 0~50，单独控制）；桌高随端面座位数加长
+      const n = Math.max(t.seatsA, t.seatsB), w = n * (V.SEAT_W + V.GAP) - V.GAP + 16, dw = w;
+      const nL = t.seatsL != null ? t.seatsL : (t.seatsE || 0), nR = t.seatsR != null ? t.seatsR : (t.seatsE || 0);
+      const dh = Math.max(V.DESK_LONG_H, (Math.max(nL, nR) - 1) * (V.SEAT_H + V.GAP) + V.SEAT_H);
+      for (let i = 0; i < t.seatsA; i++)seats.push({ key: t.id + ':a:' + i, i, side: 'a', x: fx(-(w - 16) / 2 + V.SEAT_W / 2 + i * (V.SEAT_W + V.GAP)), y: -(dh / 2 + 15), w: V.SEAT_W, h: V.SEAT_H });
+      for (let i = 0; i < t.seatsB; i++)seats.push({ key: t.id + ':b:' + i, i, side: 'b', x: fx(-(w - 16) / 2 + V.SEAT_W / 2 + i * (V.SEAT_W + V.GAP)), y: (dh / 2 + 15), w: V.SEAT_W, h: V.SEAT_H });
+      const mkEnds = (n, tag, sgn) => {
+        for (let i = 0; i < n; i++) { // 竖排；1 个居桌侧中线，2 个上下错开
+          seats.push({ key: t.id + ':' + tag + ':' + i, i, side: 'e', x: fx(sgn * (w / 2 + V.SEAT_W / 2 + V.GAP)), y: (i - (n - 1) / 2) * (V.SEAT_H + V.GAP), w: V.SEAT_W, h: V.SEAT_H })
+        }
+      };
+      mkEnds(nR, 'er', 1); mkEnds(nL, 'el', -1);
+      return { seats, desk: { w: dw, h: dh } };
+    }
+    function venueOrder() { // 全场礼宾序：桌按编号升序；桌内 courtesyOrder/ringOrder；返回 [{key,no}]
+      const out = []; let off = 0;
+      const tables = [...state.venue.tables].sort((a, b) => a.no - b.no);
+      for (const t of tables) {
+        const g = tableGeom(t); let idx = [];
+        if (t.kind === 'round') idx = ringOrder(t.seatsA, t.flip).map(p => g.seats.find(s => s.side === 'r' && s.i === p));
+        else if (t.kind === 'podium') idx = courtesyOrder(t.seatsA, t.flip).map(p => g.seats.find(s => s.i === p));
+        else { // long：对坐礼宾——1 号正对对面最高位次，2 对对面第 3、3 对对面第 2（4v4 = 上3124/下6578）；端位排最后（视觉右端先、每端从上到下）
+          const A = g.seats.filter(s => s.side === 'a'), B = g.seats.filter(s => s.side === 'b');
+          idx = courtesyOrder(A.length, false).map(p => A[p]).concat(courtesyOrder(B.length, true).map(p => B[p]));
+          idx = idx.concat(g.seats.filter(s => s.side === 'e').sort((p, q) => q.x - p.x || p.y - q.y));
+        }
+        const D = disabledList();
+        for (const s of idx) if (s && !D.includes(s.key)) out.push({ key: s.key, no: ++off });
+      }
+      return out;
+    }
+
+    /* ---- canvas 渲染 ---- */
+    const canvas = document.getElementById('seat-canvas'), ctx = canvas.getContext('2d');
+    function fitCanvasDPR() {
+      const r = canvas.parentElement.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+      canvas.style.width = r.width + 'px'; canvas.style.height = r.height + 'px';
+    }
+    function screenToWorld(sx, sy) { const v = state.venue; return { x: (sx - v.view.x) / (v.zoom * V.PXM), y: (sy - v.view.y) / (v.zoom * V.PXM) } }
+    function seatPerson(key) { const pid = state.venue.assign[key]; return pid ? state.people.find(p => p.id === pid) : null }
+    function drawSeatBox(c, s, t, no) {
+      const p = seatPerson(s.key), dis = disabledList().includes(s.key);
+      c.fillStyle = p ? '#eef4ff' : dis ? '#e6e6e6' : '#fff';
+      c.fillRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h);
+      if (dis) {
+        c.save(); c.beginPath(); c.rect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h); c.clip();
+        c.strokeStyle = '#c8c8c8'; c.lineWidth = .25;
+        c.beginPath();
+        for (let x = -s.w / 2; x < s.w / 2 + s.h; x += 2.6) { c.moveTo(s.x + x, s.y + s.h / 2); c.lineTo(s.x + x - s.h, s.y - s.h / 2) }
+        c.stroke(); c.restore();
+        c.font = '4px sans-serif'; c.fillStyle = '#aaa'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText('×', s.x, s.y);
+      }
+      c.strokeStyle = dis ? '#bbb' : (state.venue.selSeat === s.key ? '#1a66ff' : '#333');
+      c.lineWidth = state.venue.selSeat === s.key && !dis ? .5 : .25;
+      c.strokeRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h);
+      if (p) { // 名字随框宽缩放
+        let fs = s.h * .62; const name = p.name.length === 2 ? p.name[0] + ' ' + p.name[1] : p.name;
+        c.font = `${fs}px "SimHei","Heiti SC","PingFang SC",sans-serif`;
+        while (c.measureText(name).width > s.w - 3 && fs > 4) { fs -= .5; c.font = `${fs}px "SimHei","Heiti SC","PingFang SC",sans-serif` }
+        c.fillStyle = '#111'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, s.x, s.y + .3);
+      }
+      if (state.venue.showNo && no && !dis) { // 礼宾序号：座位上缘小字（禁用座不显示）
+        c.font = '3.6px sans-serif'; c.fillStyle = '#1a66ff'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+        c.fillText(no, s.x, s.y - s.h / 2 - .6);
+      }
+    }
+    function drawTable(c, t) {
+      const g = tableGeom(t), sel = state.venue.sel === t.id;
+      c.save(); c.translate(t.x, t.y); c.rotate(t.rot * Math.PI / 180);
+      c.fillStyle = '#f7f4ec'; c.strokeStyle = sel ? '#1a66ff' : '#444'; c.lineWidth = sel ? .6 : .35;
+      if (t.kind === 'round') { c.beginPath(); c.arc(0, 0, g.desk.r, 0, 7); c.fill(); c.stroke() }
+      else { roundRect(c, -g.desk.w / 2, -g.desk.h / 2, g.desk.w, g.desk.h, 3); c.fill(); c.stroke() }
+      c.font = '8px "SimHei","Heiti SC",sans-serif'; c.fillStyle = '#8a7a55'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(String(t.no), 0, t.kind === 'round' ? 0 : 0);
+      // 座位（先下侧后上侧，人名后画避免被桌体盖住）
+      const nos = noMapFor(t);
+      g.seats.filter(s => s.side !== 'a' && s.side !== 'p').forEach(s => drawSeatBox(c, s, t, nos[s.key]));
+      g.seats.filter(s => s.side === 'a' || s.side === 'p').forEach(s => drawSeatBox(c, s, t, nos[s.key]));
+      c.restore();
+    }
+    function roundRect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath() }
+    function noMapFor(t) { const m = {}; venueOrder().forEach(o => m[o.key] = o.no); return m }
+    function renderSeat() { // 渲染主入口（沿用 1.0 函数名）
+      const v = state.venue, dpr = window.devicePixelRatio || 1;
+      fitCanvasDPR();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#eef0f4'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // mm 网格
+      ctx.setTransform(dpr * v.zoom * V.PXM, 0, 0, dpr * v.zoom * V.PXM, dpr * v.view.x, dpr * v.view.y);
+      ctx.strokeStyle = 'rgba(0,0,0,.05)'; ctx.lineWidth = .15;
+      const gw = canvas.width / (dpr * v.zoom * V.PXM);
+      for (let x = 0; x < gw; x += 20) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height / (dpr * v.zoom * V.PXM)); ctx.stroke() }
+      for (let y = 0; y < canvas.height / (dpr * v.zoom * V.PXM); y += 20) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(gw, y); ctx.stroke() }
+      [...v.tables].sort((a, b) => a.no - b.no).forEach(t => drawTable(ctx, t));
+      // 拖人 ghost
+      if (dragGhost) {
+        ctx.setTransform(dpr * v.zoom * V.PXM, 0, 0, dpr * v.zoom * V.PXM, dpr * v.view.x, dpr * v.view.y);
+        ctx.fillStyle = 'rgba(26,102,255,.15)'; ctx.strokeStyle = '#1a66ff'; ctx.lineWidth = .4;
+        ctx.fillRect(dragGhost.x - 18, dragGhost.y - 7.5, 36, 15); ctx.strokeRect(dragGhost.x - 18, dragGhost.y - 7.5, 36, 15)
+      }
+      document.getElementById('zoom-label').textContent = Math.round(v.zoom * 100) + '%';
+    }
+    function hitTable(wx, wy) {
+      for (const t of [...state.venue.tables].sort((a, b) => b.no - a.no)) {
+        const a = -t.rot * Math.PI / 180, dx = wx - t.x, dy = wy - t.y;
+        const lx = dx * Math.cos(a) - dy * Math.sin(a), ly = dx * Math.sin(a) + dy * Math.cos(a);
+        const g = tableGeom(t);
+        if (t.kind === 'round') { if (lx * lx + ly * ly <= (g.desk.r + 4) ** 2) return t }
+        else if (Math.abs(lx) <= g.desk.w / 2 + 3 && Math.abs(ly) <= g.desk.h / 2 + 3) return t;
+      }
+      return null;
+    }
+    function hitSeat(wx, wy) {
+      for (const t of state.venue.tables) {
+        const a = -t.rot * Math.PI / 180, dx = wx - t.x, dy = wy - t.y;
+        const lx = dx * Math.cos(a) - dy * Math.sin(a), ly = dx * Math.sin(a) + dy * Math.cos(a);
+        for (const s of tableGeom(t).seats)
+          if (Math.abs(lx - s.x) <= s.w / 2 + 3 && Math.abs(ly - s.y) <= s.h / 2 + 3) return { t, s };
+      }
+      return null;
+    }
+
+    /* ---- 画布交互：拖桌 / 拖人 / 平移 / 缩放 ---- */
+    let dragGhost = null, canvasDrag = null;
+    function canvasPos(e) { const r = canvas.getBoundingClientRect(); return { sx: e.clientX - r.left, sy: e.clientY - r.top } }
+    canvas.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault() }); // 中键：防浏览器自动滚动
+    canvas.addEventListener('pointerdown', e => {
+      if (e.button === 2) return;   // 右键留给「禁用座位」；左键/中键都可拖
+      try { canvas.setPointerCapture(e.pointerId) } catch (err) { } // 合成事件/特殊环境下捕获失败不阻断拖拽
+      const { sx, sy } = canvasPos(e), w = screenToWorld(sx, sy);
+      if (e.button !== 1) { // 中键 = 纯平移：不选中/不拖桌子/不拖人
+        const hs = hitSeat(w.x, w.y);
+        if (hs && state.venue.assign[hs.s.key]) { canvasDrag = { mode: 'person', fromKey: hs.s.key }; state.venue.selSeat = hs.s.key; renderSeat(); return }
+        const ht = hitTable(w.x, w.y);
+        if (ht) { canvasDrag = { mode: 'table', id: ht.id, ox: w.x - ht.x, oy: w.y - ht.y }; if (state.venue.sel !== ht.id) { state.venue.sel = ht.id; renderTableProp() } renderSeat(); return }
+        state.venue.sel = null; renderTableProp();
+      }
+      canvasDrag = { mode: 'pan', sx, sy, vx: state.venue.view.x, vy: state.venue.view.y };
+      canvas.style.cursor = 'grabbing'; renderSeat();
+    });
+    /* ---- 禁用座位：右键切换；禁用后不参与排座/指派 ---- */
+    function disabledList() { if (!Array.isArray(state.venue.disabled)) state.venue.disabled = []; return state.venue.disabled }
+    canvas.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      const { sx, sy } = canvasPos(e), w = screenToWorld(sx, sy), hs = hitSeat(w.x, w.y);
+      if (!hs) return;
+      const D = disabledList(), i = D.indexOf(hs.s.key);
+      if (i >= 0) D.splice(i, 1);
+      else { D.push(hs.s.key); delete state.venue.assign[hs.s.key]; if (state.venue.selSeat === hs.s.key) state.venue.selSeat = null }
+      save(); renderSeat(); renderSeatPeople();
+    });
+    canvas.addEventListener('pointermove', e => {
+      if (!canvasDrag) return;
+      const { sx, sy } = canvasPos(e), w = screenToWorld(sx, sy);
+      if (canvasDrag.mode === 'pan') { state.venue.view.x = canvasDrag.vx + (sx - canvasDrag.sx); state.venue.view.y = canvasDrag.vy + (sy - canvasDrag.sy); renderSeat() }
+      else if (canvasDrag.mode === 'table') { const t = state.venue.tables.find(x => x.id === canvasDrag.id); if (t) { t.x = Math.round(w.x - canvasDrag.ox); t.y = Math.round(w.y - canvasDrag.oy); renderSeat() } }
+      else if (canvasDrag.mode === 'person') { dragGhost = w; let hs = hitSeat(w.x, w.y); if (hs && disabledList().includes(hs.s.key)) hs = null; state.venue.selSeat = hs ? hs.s.key : null; renderSeat() }
+    });
+    canvas.addEventListener('pointerup', e => {
+      if (!canvasDrag) return;
+      const { sx, sy } = canvasPos(e), w = screenToWorld(sx, sy);
+      if (canvasDrag.mode === 'person') {
+        let hs = hitSeat(w.x, w.y); if (hs && disabledList().includes(hs.s.key)) hs = null;
+        const A = state.venue.assign;
+        if (hs && hs.s.key !== canvasDrag.fromKey) {
+          const pf = A[canvasDrag.fromKey], pt = A[hs.s.key];   // 移动或互换
+          if (pt) A[canvasDrag.fromKey] = pt; else delete A[canvasDrag.fromKey];
+          if (pf) A[hs.s.key] = pf;
+        } else if (!hs) { delete state.venue.assign[canvasDrag.fromKey] } // 拖到空白/禁用座撤销
+        dragGhost = null; save(); renderSeat(); renderSeatPeople();
+      } else if (canvasDrag.mode === 'pan') { canvas.style.cursor = 'grab'; save() }
+      else if (canvasDrag.mode === 'table') { save() }
+      canvasDrag = null;
+    });
+    canvas.addEventListener('dblclick', e => {
+      const { sx, sy } = canvasPos(e), w = screenToWorld(sx, sy), hs = hitSeat(w.x, w.y);
+      if (hs) { delete state.venue.assign[hs.s.key]; save(); renderSeat(); renderSeatPeople() }
+    });
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      const v = state.venue, { sx, sy } = canvasPos(e), old = v.zoom;
+      v.zoom = Math.min(4, Math.max(.01, v.zoom * Math.exp(-e.deltaY * .0012)));
+      const w = screenToWorld(sx, sy);
+      v.view.x = sx - w.x * v.zoom * V.PXM; v.view.y = sy - w.y * v.zoom * V.PXM;
+      renderSeat();
+    }, { passive: false });
+    window.addEventListener('keydown', e => {
+      if (document.getElementById('tab-seat').classList.contains('hidden')) return;
+      if ((e.key === 'Delete' || e.key === 'Backspace') && state.venue.sel && e.target.tagName !== 'INPUT') { delTable(state.venue.sel) }
+    });
+    document.getElementById('btn-zoom-in').onclick = () => { state.venue.zoom = Math.min(4, state.venue.zoom * 1.25); renderSeat(); save() };
+    document.getElementById('btn-zoom-out').onclick = () => { state.venue.zoom = Math.max(.01, state.venue.zoom / 1.25); renderSeat(); save() };
+    document.getElementById('btn-zoom-fit').onclick = () => { zoomFit(); save() };
+    function zoomFit() {
+      const v = state.venue; if (!v.tables.length) { v.zoom = 1; v.view = { x: 40, y: 30 }; renderSeat(); return }
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (const t of v.tables) {
+        // 旋转感知 AABB（半宽半高 + 座位/人名余量）
+        const g = tableGeom(t), dw = g.desk.w || 2 * (g.desk.r || 0), dh = g.desk.h || 2 * (g.desk.r || 0);
+        const a = Math.abs(Math.cos(t.rot * Math.PI / 180)), b = Math.abs(Math.sin(t.rot * Math.PI / 180));
+        const ex = (a * dw + b * dh) / 2 + 45, ey = (b * dw + a * dh) / 2 + 45;
+        x0 = Math.min(x0, t.x - ex); y0 = Math.min(y0, t.y - ey); x1 = Math.max(x1, t.x + ex); y1 = Math.max(y1, t.y + ey)
+      }
+      const r = canvas.getBoundingClientRect();
+      v.zoom = Math.min(4, Math.max(.01, Math.min(r.width / ((x1 - x0) * V.PXM), r.height / ((y1 - y0) * V.PXM)) * .95));
+      v.view.x = (r.width - (x0 + x1) * v.zoom * V.PXM) / 2; v.view.y = (r.height - (y0 + y1) * v.zoom * V.PXM) / 2;
+      renderSeat();
+    }
+
+    /* ---- 桌子 CRUD 与面板 ---- */
+    let nextTid = 1;
+    function addTable(kind) {
+      const no = state.venue.tables.reduce((m, t) => Math.max(m, t.no), 0) + 1;
+      const t = {
+        id: 't' + (nextTid++) + '_' + Date.now().toString(36), no, kind, x: 80, y: 70, rot: 0, flip: false,
+        seatsA: kind === 'round' ? 10 : kind === 'podium' ? 7 : 6, seatsB: kind === 'long' ? 6 : 0
+      };
+      // 自动避开已放置的桌子：从默认起点按网格找第一个不重叠的空位（AABB 近似，含座位余量）
+      // 4 列网格：让多桌场地接近画布宽高比，「适应」后桌子显示尺寸合理（8 列横排会缩成扁带）
+      const half = tb => { const g = tableGeom(tb), w = g.desk.w || 2 * (g.desk.r || 0), h = g.desk.h || 2 * (g.desk.r || 0); return [w / 2 + 50, h / 2 + 50] };
+      const [hw, hh] = half(t);
+      let ok = !state.venue.tables.length;
+      for (let row = 0; row < 60 && !ok; row++)for (let col = 0; col < 4 && !ok; col++) {
+        const x = 80 + col * (2 * hw + 60), y = 70 + row * (2 * hh + 60);
+        if (!state.venue.tables.some(o => { const [ow, oh] = half(o); return Math.abs(o.x - x) < hw + ow && Math.abs(o.y - y) < hh + oh })) {
+          t.x = Math.round(x); t.y = Math.round(y); ok = true;
+        }
+      }
+      state.venue.tables.push(t); state.venue.sel = t.id;
+      save(); renderTableProp(); renderTableForm();
+      // 视角平移到新桌子（zoom 保持不变，仅移动 view）；rAF 下一帧布局完全稳定后再取 rect，双保险
+      renderSeat();
+      requestAnimationFrame(() => {
+        const r = canvas.getBoundingClientRect();
+        state.venue.view.x = Math.round(r.width / 2 - t.x * state.venue.zoom * V.PXM);
+        state.venue.view.y = Math.round(r.height / 2 - t.y * state.venue.zoom * V.PXM);
+        renderSeat();
+      });
+    }
+    function delTable(id) {
+      const i = state.venue.tables.findIndex(t => t.id === id); if (i < 0) return;
+      state.venue.tables.splice(i, 1);
+      for (const k in state.venue.assign) if (k.startsWith(id + ':')) delete state.venue.assign[k];
+      state.venue.disabled = disabledList().filter(k => !k.startsWith(id + ':'));
+      if (state.venue.sel === id) state.venue.sel = null;
+      normalizeNos(); save(); renderTableProp(); renderTableForm(); renderSeat(); renderSeatPeople();
+    }
+    function normalizeNos() { const ts = [...state.venue.tables].sort((a, b) => (a.no - b.no) || ((a.id < b.id) ? -1 : 1)); ts.forEach((t, i) => t.no = i + 1) }
+    function moveNo(id, dir) {
+      const ts = [...state.venue.tables].sort((a, b) => a.no - b.no);
+      const i = ts.findIndex(t => t.id === id), j = i + dir;
+      if (i < 0 || j < 0 || j >= ts.length) return;
+      [ts[i].no, ts[j].no] = [ts[j].no, ts[i].no];
+      normalizeNos(); save(); renderTableProp(); renderTableForm(); renderSeat();
+    }
+    const KIND_NAME = { long: '长条桌', round: '圆桌', podium: '主席台' };
+    function renderTableProp() {
+      const box = document.getElementById('table-prop');
+      const t = state.venue.tables.find(x => x.id === state.venue.sel);
+      if (!t) { box.innerHTML = '<p class="hint">点击画布中的桌子选中。</p>'; return }
+      const seatInputs = t.kind === 'long'
+        ? `<label>上侧座位 <input type="number" id="tp-a" min="0" max="50" value="${t.seatsA}" style="width:56px"></label>
+      <label>下侧座位 <input type="number" id="tp-b" min="0" max="50" value="${t.seatsB}" style="width:56px"></label>
+      <label>左端座位 <input type="number" id="tp-l" min="0" max="50" value="${t.seatsL != null ? t.seatsL : (t.seatsE || 0)}" style="width:56px"></label>
+      <label>右端座位 <input type="number" id="tp-r" min="0" max="50" value="${t.seatsR != null ? t.seatsR : (t.seatsE || 0)}" style="width:56px"></label>`
+        : `<label>座位数 <input type="number" id="tp-a" min="${t.kind === 'round' ? 4 : 3}" max="50" value="${t.seatsA}" style="width:56px"></label>`;
+      box.innerHTML = `<div class="row"><b>${KIND_NAME[t.kind]} #${t.no}</b></div>
+    <div class="row">${seatInputs}</div>
+    <div class="row">
+      <button class="btn small" id="tp-rot">↻ 旋转 90°（当前 ${t.rot}°）</button>
+      <button class="btn small ghost" id="tp-flip">⇋ 翻转${t.flip ? '（开）' : ''}</button>
+      <button class="btn small danger" id="tp-del">删除桌子</button>
+    </div>`;
+      const upd = () => { // 座位数变化：裁掉超出座位上的人
+        const long = t.kind === 'long';
+        const a = clamp(+document.getElementById('tp-a').value || 0, long ? 0 : t.kind === 'round' ? 4 : 3, 50);
+        t.seatsA = a; if (long) {
+          t.seatsB = clamp(+document.getElementById('tp-b').value || 0, 0, 50);
+          t.seatsL = clamp(+document.getElementById('tp-l').value || 0, 0, 50);
+          t.seatsR = clamp(+document.getElementById('tp-r').value || 0, 0, 50)
+        }
+        const keep = new Set(tableGeom(t).seats.map(s => s.key));
+        for (const k in state.venue.assign) if (k.startsWith(t.id + ':') && !keep.has(k)) delete state.venue.assign[k];
+        state.venue.disabled = disabledList().filter(k => !k.startsWith(t.id + ':') || keep.has(k));
+        save(); renderTableForm(); renderSeat(); renderSeatPeople();
+      };
+      document.getElementById('tp-a').addEventListener('change', upd);
+      const b = document.getElementById('tp-b'); if (b) b.addEventListener('change', upd);
+      const eL = document.getElementById('tp-l'); if (eL) eL.addEventListener('change', upd);
+      const eR = document.getElementById('tp-r'); if (eR) eR.addEventListener('change', upd);
+      document.getElementById('tp-rot').onclick = () => { t.rot = (t.rot + 90) % 360; save(); renderTableProp(); renderSeat() };
+      document.getElementById('tp-flip').onclick = () => { t.flip = !t.flip; save(); renderTableProp(); renderSeat() };
+      document.getElementById('tp-del').onclick = () => delTable(t.id);
+    }
+    function renderTableForm() {
+      const box = document.getElementById('table-form');
+      const ts = [...state.venue.tables].sort((a, b) => a.no - b.no);
+      if (!ts.length) { box.innerHTML = '<p class="hint">尚未添加桌子。</p>'; return }
+      box.innerHTML = ts.map(t => `<div class="trow" data-id="${t.id}">
+    <input class="no" type="number" data-act="no" value="${t.no}" min="1">
+    <span class="kind">${KIND_NAME[t.kind]}</span>
+    <span style="font-size:12px;color:#888">${t.kind === 'long' ? t.seatsA + '+' + t.seatsB : t.seatsA} 座</span>
+    <span style="flex:1"></span>
+    <button class="btn small ghost mini" data-act="up">↑</button>
+    <button class="btn small ghost mini" data-act="down">↓</button>
+    <button class="btn small danger mini" data-act="del">删</button>
+  </div>`).join('');
+      box.querySelectorAll('.trow').forEach(row => {
+        const id = row.dataset.id, t = state.venue.tables.find(x => x.id === id);
+        row.querySelector('[data-act=no]').addEventListener('change', e => {
+          t.no = clamp(+e.target.value || t.no, 1, 99); normalizeNos(); save(); renderTableProp(); renderTableForm(); renderSeat();
+        });
+        row.querySelector('[data-act=up]').onclick = () => moveNo(id, -1);
+        row.querySelector('[data-act=down]').onclick = () => moveNo(id, 1);
+        row.querySelector('[data-act=del]').onclick = () => delTable(id);
+      });
+    }
+    document.getElementById('btn-clear-tables').onclick = e => {
+      e.stopPropagation();   // 不触发卡片折叠
+      if (!state.venue.tables.length) return;
+      if (!confirm('确定清除全部桌子？排座与禁用状态将一并清除（名单保留）。')) return;
+      state.venue.tables = []; state.venue.assign = {}; state.venue.disabled = [];
+      state.venue.sel = null; state.venue.selSeat = null;
+      save(); renderTableProp(); renderTableForm(); renderSeat(); renderSeatPeople();
+    };
+    document.getElementById('btn-add-long').onclick = () => addTable('long');
+    document.getElementById('btn-add-round').onclick = () => addTable('round');
+    document.getElementById('btn-add-podium').onclick = () => addTable('podium');
+    document.getElementById('seat-show-no').addEventListener('change', e => { state.venue.showNo = e.target.checked; save(); renderSeat() });
+
+    /* ---- 名单面板 + 指派（点击选中座位 / 拖拽到座位） ---- */
+    function renderSeatPeople() {
+      const box = document.getElementById('seat-people');
+      box.innerHTML = state.people.map(p => {
+        const seatKey = Object.keys(state.venue.assign).find(k => state.venue.assign[k] === p.id);
+        const t = seatKey ? state.venue.tables.find(x => x.id === seatKey.split(':')[0]) : null;
+        const no = t ? '（' + t.no + '号桌' + (seatKeySuffix(seatKey)) + '）' : '';
+        return `<div class="pchip${seatKey ? ' on' : ''}" data-pid="${p.id}" style="cursor:grab">${esc(p.name)}<small>${esc(p.title || '')}${no}</small></div>`;
+      }).join('') || '<span class="hint">名单为空</span>';
+    }
+    function seatKeySuffix(key) { // 座位礼宾序号
+      const o = venueOrder().find(o => o.key === key);
+      return o ? ' ' + o.no + '号位' : '';
+    }
+    document.getElementById('seat-people').addEventListener('click', e => {
+      const chip = e.target.closest('.pchip'); if (!chip) return;
+      const pid = chip.dataset.pid, D = disabledList(), sel = state.venue.selSeat;
+      if (sel && !D.includes(sel)) { // 已选中座位：指派到该座
+        for (const k in state.venue.assign) if (state.venue.assign[k] === pid) delete state.venue.assign[k];
+        state.venue.assign[sel] = pid; state.venue.selSeat = null;
+        save(); renderSeat(); renderSeatPeople(); return;
+      }
+      // 未选座位：自动指派到礼宾序第一个空位（跳过禁用座）
+      const target = venueOrder().find(o => !state.venue.assign[o.key]);
+      if (!target) { chip.classList.add('flash'); setTimeout(() => chip.classList.remove('flash'), 600); return }
+      for (const k in state.venue.assign) if (state.venue.assign[k] === pid) delete state.venue.assign[k];
+      state.venue.assign[target.key] = pid;
+      save(); renderSeat(); renderSeatPeople();
+    });
+    /* 名单 chip 拖入画布 */
+    document.getElementById('seat-people').addEventListener('pointerdown', e => {
+      const chip = e.target.closest('.pchip'); if (!chip) return;
+      e.preventDefault();
+      const pid = chip.dataset.pid; let ghost = null, moved = false;
+      const mv = ev => {
+        if (!moved && Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 5) return;
+        moved = true;
+        if (!ghost) {
+          ghost = document.createElement('div'); ghost.textContent = chip.querySelector('small') ? chip.childNodes[0].textContent : chip.textContent;
+          ghost.style.cssText = 'position:fixed;z-index:99;padding:2px 8px;background:#1a66ff;color:#fff;border-radius:4px;font-size:13px;pointer-events:none';
+          document.body.appendChild(ghost)
+        }
+        ghost.style.left = ev.clientX + 10 + 'px'; ghost.style.top = ev.clientY - 8 + 'px';
+        const r = canvas.getBoundingClientRect();
+        if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
+          const w = screenToWorld(ev.clientX - r.left, ev.clientY - r.top), hs = hitSeat(w.x, w.y);
+          state.venue.selSeat = hs ? hs.s.key : null; dragGhost = hs ? { x: w.x, y: w.y } : null; renderSeat();
+        }
+      };
+      const up = ev => {
+        window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+        if (ghost) ghost.remove(); dragGhost = null;
+        if (!moved) return;
+        const r = canvas.getBoundingClientRect();
+        if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
+          const w = screenToWorld(ev.clientX - r.left, ev.clientY - r.top), hs = hitSeat(w.x, w.y);
+          if (hs && !disabledList().includes(hs.s.key)) state.venue.assign[hs.s.key] = pid;
+        }
+        save(); renderSeat(); renderSeatPeople();
+      };
+      window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+    });
+
+    /* ---- 一键排座 / 清空 ---- */
+    document.getElementById('btn-auto-seat').onclick = () => {
+      if (!state.people.length) { alert('名单为空'); return }
+      const order = venueOrder();
+      if (!order.length) { alert('请先添加桌子'); return }
+      state.venue.assign = {};
+      order.forEach((o, i) => { if (i < state.people.length) state.venue.assign[o.key] = state.people[i].id });
+      save(); renderSeat(); renderSeatPeople();
+    };
+    document.getElementById('btn-clear-seat').onclick = () => { state.venue.assign = {}; save(); renderSeat(); renderSeatPeople() };
+
+    /* ---- 打印 / 导出（按当前画布 zoom 输出：所见即所得；打印不小于铺满 A4 的比例） ---- */
+    function renderHiRes(ppmm, mode) {
+      const c = document.createElement('canvas');
+      if (!state.venue.tables.length) {
+        c.width = 297 * ppmm; c.height = 210 * ppmm; c._wmm = 297; c._hmm = 210;
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+        g.fillStyle = '#999'; g.font = (20 * ppmm) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('（空会场）', c.width / 2, c.height / 2);
+        return c;
+      }
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (const t of state.venue.tables) {
+        const gm = tableGeom(t), dw = gm.desk.w || 2 * (gm.desk.r || 0), dh = gm.desk.h || 2 * (gm.desk.r || 0);
+        const m = Math.hypot(dw, dh) / 2 + 45; // 任意旋转角度下桌子最大半径 + 座位/人名余量
+        x0 = Math.min(x0, t.x - m); y0 = Math.min(y0, t.y - m); x1 = Math.max(x1, t.x + m); y1 = Math.max(y1, t.y + m)
+      }
+      const w = x1 - x0, h = y1 - y0, z = state.venue.zoom || 1;
+      // 缩放：世界 mm → 纸面 mm。PNG 按当前 zoom（屏幕观感 1:1）；打印至少铺满 A4 可打印区（281x194mm，四周留 4mm 边距）
+      const sFit = Math.min((297 - 8 - 8) / w, (210 - 8 - 8) / h);
+      const s = mode === 'png' ? z : Math.max(z, sFit);
+      const wmm = w * s + 8, hmm = h * s + 8;
+      if (mode === 'png') ppmm = Math.max(3, Math.min(ppmm, 9000 / Math.max(wmm, hmm))); // 防超大画布
+      c.width = Math.round(wmm * ppmm); c.height = Math.round(hmm * ppmm); c._wmm = wmm; c._hmm = hmm;
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      const ox = (4 - x0 * s) * ppmm, oy = (4 - y0 * s) * ppmm, k = s * ppmm;
+      const draw = (t2) => { g.translate(ox, oy); g.scale(k, k); drawTable(g, t2); g.setTransform(1, 0, 0, 1, 0, 0) };
+      [...state.venue.tables].sort((a, b) => a.no - b.no).forEach(draw);
+      return c;
+    }
+    document.getElementById('btn-print-seat').onclick = () => {
+      document.getElementById('page-style').textContent = '@page{size:A4 landscape;margin:8mm}';
+      const pa = document.getElementById('print-area'); pa.innerHTML = '';
+      const c = renderHiRes(8, 'print');
+      const sc = Math.min(1, 281 / c._wmm, 194 / c._hmm); // 超出 A4 可打印区时等比缩回
+      c.style.cssText = `width:${(c._wmm * sc).toFixed(1)}mm;max-width:100%;display:block;margin:0 auto`;
+      pa.appendChild(c);
+      document.body.classList.remove('print-sign'); document.body.classList.add('print-seat');
+      window.print();
+    };
+    document.getElementById('btn-export-png').onclick = () => {
+      renderHiRes(10, 'png').toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = '会场座位示意图.png'; a.click() });
+    };
+    /* ---- 会场配置导出/导入 JSON（含名单，导入后自动存 localStorage） ---- */
+    document.getElementById('btn-export-venue').onclick = () => {
+      const data = {
+        app: 'meeting-signs', format: 'venue', version: 4, exportedAt: new Date().toISOString(),
+        people: state.people, nextPid,
+        venue: { tables: state.venue.tables, assign: state.venue.assign, disabled: disabledList(), showNo: state.venue.showNo, zoom: state.venue.zoom, view: state.venue.view },
+        venueLib: loadVenues()          // 全部已保存的会议室及其布局
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      const t = new Date(), p = n => String(n).padStart(2, '0');
+      a.download = `会场配置_${t.getFullYear()}${p(t.getMonth() + 1)}${p(t.getDate())}_${p(t.getHours())}${p(t.getMinutes())}.json`;
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    };
+    document.getElementById('btn-import-venue').onclick = () => document.getElementById('venue-json-file').click();
+    document.getElementById('venue-json-file').addEventListener('change', e => {
+      const f = e.target.files[0]; if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => {
+        let d; try { d = JSON.parse(rd.result) } catch (err) { alert('文件不是有效的 JSON：' + err.message); return }
+        if (!d || d.format !== 'venue' || !Array.isArray(d.people) || !d.venue || !Array.isArray(d.venue.tables)) {
+          alert('这不是本应用导出的会场配置文件（缺少 format:venue / people / venue 数据）。'); return;
+        }
+        if (!confirm(`导入「${f.name}」：\n名单 ${d.people.length} 人，桌子 ${d.venue.tables.length} 张${Array.isArray(d.venueLib) && d.venueLib.length ? `，会议室库 ${d.venueLib.length} 个（同名覆盖、新的追加）` : ''}。\n将替换当前的名单、会场布局和排座结果，确定？`)) return;
+        state.people = d.people;
+        nextPid = d.nextPid || d.people.reduce((m, p) => Math.max(m, p.id || 0), 0) + 1;
+        state.venue = {
+          tables: d.venue.tables, assign: d.venue.assign || {}, disabled: Array.isArray(d.venue.disabled) ? d.venue.disabled : [], sel: null, selSeat: null,
+          showNo: d.venue.showNo !== false, zoom: d.venue.zoom || 1, view: d.venue.view || { x: 40, y: 30 }
+        };
+        state.selectedSeat = null; state.sign.excluded = [];
+        // 会议室库：同名覆盖、不同名追加（旧文件无此字段则不动本机库）
+        if (Array.isArray(d.venueLib) && d.venueLib.length) {
+          const lib = loadVenues();
+          d.venueLib.forEach(v => {
+            if (v && v.name && Array.isArray(v.tables)) {
+              const old = lib.find(x => x.name === v.name);
+              if (old) Object.assign(old, v); else lib.push(v);
+            }
+          });
+          saveVenues(lib);
+        }
+        save();            // 立即存入浏览器 localStorage，刷新不丢
+        renderPeopleTable(); renderSeatPeople(); renderTableProp(); renderTableForm(); renderSeat(); renderSignChips(); renderVenueLib();
+        alert('导入成功，已保存在浏览器里。');
+      };
+      rd.readAsText(f, 'utf-8');
+      e.target.value = '';   // 允许重复选同一文件
+    });
+    /* ---- 会议室库：多个会议室布局存取（独立 localStorage，只存桌子布局不含名单/排座） ---- */
+    const VENUES_KEY = 'meeting-signs-venues';
+    function loadVenues() { try { return JSON.parse(localStorage.getItem(VENUES_KEY)) || [] } catch (e) { return [] } }
+    function saveVenues(v) { try { localStorage.setItem(VENUES_KEY, JSON.stringify(v)) } catch (e) { } }
+    function renderVenueLib() {
+      const box = document.getElementById('venue-lib'), list = loadVenues();
+      box.innerHTML = list.length ? list.map(v => `
+    <div class="trow" data-vid="${v.id}">
+      <b class="nm" style="flex:1">${esc(v.name)}</b>
+      <span class="kind">${v.tables.length}桌</span>
+      <button class="btn mini" data-act="load">载入</button>
+      <button class="btn mini danger" data-act="del">删</button>
+    </div>`).join('') : '<p class="hint" style="padding:4px 0">（尚无保存的会议室）</p>';
+      box.querySelectorAll('button[data-act]').forEach(btn => btn.addEventListener('click', () => {
+        const id = btn.closest('.trow').dataset.vid, lib = loadVenues(), v = lib.find(x => x.id === id); if (!v) return;
+        if (btn.dataset.act === 'del') {
+          if (confirm(`删除会议室「${v.name}」？`)) { saveVenues(lib.filter(x => x.id !== id)); renderVenueLib() }
+          return;
+        }
+        // 载入：替换布局、清排座，名单保留
+        if (state.venue.tables.length || Object.keys(state.venue.assign).length) {
+          if (!confirm(`载入「${v.name}」将替换当前会场布局并清空排座（名单保留）。确定？`)) return;
+        }
+        state.venue.tables = JSON.parse(JSON.stringify(v.tables));
+        state.venue.assign = {}; state.venue.disabled = []; state.venue.sel = null; state.venue.selSeat = null;
+        state.venue.showNo = v.showNo !== false;
+        save(); syncUI();
+        renderTableProp(); renderTableForm(); renderSeat(); renderSeatPeople();
+      }));
+    }
+    document.getElementById('btn-save-venue').onclick = () => {
+      const inp = document.getElementById('venue-name-input'), name = inp.value.trim();
+      if (!name) { alert('请先输入会议室名称'); inp.focus(); return }
+      if (!state.venue.tables.length) { alert('当前画布没有桌子，先添加并摆好桌子再保存'); return }
+      const lib = loadVenues(), old = lib.find(v => v.name === name);
+      const snap = JSON.parse(JSON.stringify(state.venue.tables));
+      if (old) {
+        if (!confirm(`已有同名会议室「${name}」，用当前布局覆盖它？`)) return;
+        old.tables = snap; old.showNo = state.venue.showNo; old.savedAt = Date.now();
+      } else {
+        lib.push({ id: 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, tables: snap, showNo: state.venue.showNo, savedAt: Date.now() });
+      }
+      saveVenues(lib); renderVenueLib(); inp.value = '';
+    };
+    window.addEventListener('resize', () => { if (!document.getElementById('tab-seat').classList.contains('hidden')) renderSeat() });
+    window.addEventListener('afterprint', () => { document.body.classList.remove('print-sign', 'print-seat') });
+
+    /* ================= 工具 ================= */
+    function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])) }
+
+    /* ================= 启动 ================= */
+    function syncUI() {
+      document.getElementById('sign-mode').value = state.sign.mode;
+      document.getElementById('sign-perpage').value = state.sign.perPage;
+      document.getElementById('sign-size').value = state.sign.size;
+      document.getElementById('sign-font').value = state.sign.font;
+      document.getElementById('sign-customfont').value = state.sign.customFont || '';
+      document.getElementById('sign-show-title').checked = state.sign.showTitle;
+      document.getElementById('sign-bold').checked = !!state.sign.bold;
+      document.getElementById('seat-show-no').checked = state.venue.showNo !== false;
+      document.getElementById('perpage-label').classList.toggle('hidden', state.sign.mode !== 'strip');
+      document.getElementById('customfont-label').classList.toggle('hidden', state.sign.font !== 'custom');
+    }
+    load(); save();   // load 后立即回写，v1 老数据自动迁移为 v2
+    syncUI();
+    renderPeopleTable(); renderSeatPeople(); renderTableProp(); renderTableForm(); renderSignPreview(); renderVenueLib();
+    /* 侧栏卡片折叠（点击标题切换，状态存 localStorage） */
+    (function () {
+      const KEY = 'meeting-signs-collapsed';
+      let cols = []; try { cols = JSON.parse(localStorage.getItem(KEY)) || [] } catch (e) { }
+      document.querySelectorAll('.card.collapsible').forEach(c => {
+        const id = c.dataset.col;
+        if (cols.includes(id)) c.classList.add('collapsed');
+        c.querySelector('h2').addEventListener('click', () => {
+          c.classList.toggle('collapsed');
+          const on = c.classList.contains('collapsed');
+          const cur = JSON.parse(localStorage.getItem(KEY) || '[]');
+          localStorage.setItem(KEY, JSON.stringify(on ? [...new Set([...cur, id])] : cur.filter(x => x !== id)));
+        });
+      });
+    })();
+    // 字体异步加载完成后重测字高并刷新预览（首屏测量可能发生在字体就绪前）
+    document.fonts.ready.then(() => renderSignPreview());
+    /* 恢复默认：台签/座位设置与排座结果全部重置，名单保留 */
+    document.getElementById('btn-reset').onclick = () => {
+      if (!confirm('除名单外的全部设置（台签样式、会场布局、排座结果）将恢复默认，确定？')) return;
+      state.sign = { mode: 'standard', perPage: 4, size: 0, font: 'xinwei', customFont: '', showTitle: false, bold: false, excluded: [] };
+      state.venue = { tables: [], assign: {}, disabled: [], sel: null, selSeat: null, showNo: true, zoom: 1, view: { x: 40, y: 30 } };
+      state.selectedSeat = null;
+      save(); syncUI();
+      renderPeopleTable(); renderSeatPeople(); renderTableProp(); renderTableForm(); renderSeat(); renderSignPreview(); renderSignChips();
+    };
+    /* ================= 版本号 / 更新记录（与 UPDATE.md 同步维护） ================= */
+    /* ---- 撤销/重做按钮 + 快捷键（输入框聚焦时不拦截，避免与文本编辑冲突） ---- */
+    document.getElementById('btn-undo').onclick = undo;
+    document.getElementById('btn-redo').onclick = redo;
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'z') {
+        const tag = (e.target && e.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) return;
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+      }
+    });
+    const UPDATE_LOG = [
+      ['0.1.7 — 2026-09-09', [
+        '· 新增桌子自动避开已放置的桌子（网格找空位），且视角平移到新桌子（缩放比例不变）',
+        '· 「会场编辑 2.0」标题去掉版本后缀',
+      ]],
+      ['0.1.6 — 2026-09-09', [
+        '· 撤销/重做按钮移至画布右上角（圆形图标 ↶ ↷），新增重做功能（Ctrl/Cmd+Shift+Z）',
+      ]],
+      ['0.1.5 — 2026-09-09', [
+        '· 新增撤销：banner「↶ 撤销」按钮 + Ctrl/Cmd+Z 快捷键，快照式最多回退 50 步（不记录操作，仅存状态）',
+      ]],
+      ['0.1.4 — 2026-09-09', [
+        '· 版本号与「design by layla」交换位置，版本号在前',
+      ]],
+      ['0.1.3 — 2026-09-09', [
+        '· 版本号移至「design by layla」右侧，用「｜」分隔并排显示',
+        '· 长条桌左右端面座位增多时，桌子高度随之自动加长',
+      ]],
+      ['0.1.2 — 2026-09-09', [
+        '· 所有桌型单侧座位上限统一调整为 50',
+        '· 长条桌左右端面座位上限从 2 放开到 50',
+      ]],
+      ['0.1.1 — 2026-09-09', [
+        '· 台签打印字体新增「华文楷体」（STKaiti）',
+        '· 台签打印支持自定义字体：下拉选「自定义字体…」后输入任意字体名（需本机已安装）',
+        '· 取消标准模版锁定华文新魏的限制，所有模版均可自由选择字体',
+        '· 长条桌上/下侧座位数取消 20 上限，支持任意个（0~99），桌宽随座位数自动加长',
+        '· 左上角显示版本号，点击查看更新记录',
+      ]],
+    ].map(([v, items]) => v + '\n' + items.join('\n')).join('\n\n');
+    document.getElementById('app-ver').onclick = () => {
+      const m = document.getElementById('ver-modal');
+      document.getElementById('ver-log').textContent = UPDATE_LOG;
+      m.classList.add('open');
+    };
+    document.getElementById('ver-close').onclick = () => document.getElementById('ver-modal').classList.remove('open');
+    document.getElementById('ver-modal').addEventListener('click', e => { if (e.target.id === 'ver-modal') e.target.classList.remove('open') });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('ver-modal').classList.remove('open') });
+  </script>
+</body>
+
+</html>

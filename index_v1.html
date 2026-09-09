@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会议台签与座位图助手</title>
+<style>
+  :root{
+    --blue:#1a5fb4; --blue-light:#e8f0fe; --border:#d8dee9;
+    --bg:#f6f7f9; --text:#2e3440; --muted:#7b8794;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"PingFang SC","Microsoft YaHei","SimHei",sans-serif;color:var(--text);background:var(--bg)}
+  header{background:var(--blue);color:#fff;padding:14px 24px;display:flex;align-items:baseline;gap:16px}
+  header h1{font-size:20px;margin:0}
+  header span{font-size:12px;opacity:.85}
+  nav{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:4px}
+  nav button{border:none;background:none;padding:12px 18px;font-size:15px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent}
+  nav button.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+  main{padding:20px 24px;max-width:1200px;margin:0 auto}
+  main.wide{max-width:none}   /* 座位示意图页全宽 */
+  .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:16px}
+  .card h2{font-size:16px;margin:0 0 12px;color:var(--blue)}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px}
+  label{font-size:14px}
+  select,input[type=number],input[type=text]{padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:14px}
+  textarea{width:100%;min-height:140px;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-family:inherit}
+  .btn{padding:8px 18px;border:none;border-radius:4px;background:var(--blue);color:#fff;font-size:14px;cursor:pointer}
+  .btn:hover{opacity:.9}
+  .btn.ghost{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+  .btn.small{padding:3px 10px;font-size:12px}
+  .btn.danger{background:#c01c28}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th,td{border:1px solid var(--border);padding:6px 10px;text-align:left}
+  th{background:var(--blue-light)}
+  #people-table tbody tr[data-id]{cursor:grab}
+  #people-table tbody tr.dragging{opacity:.35;background:#f0f4fa}
+  #people-table tbody tr.drop-above{box-shadow:inset 0 3px 0 0 var(--blue)}
+  #people-table tbody tr.drop-below{box-shadow:inset 0 -3px 0 0 var(--blue)}
+  body.drag-active{user-select:none;-webkit-user-select:none}
+  .hint{font-size:12px;color:var(--muted);line-height:1.7}
+  .seat-layout{display:flex;gap:16px;align-items:flex-start}
+  .seat-svg-wrap{flex:1;min-width:0;border:1px solid var(--border);border-radius:6px;background:#fff;overflow:auto}
+  .people-panel{width:260px;flex-shrink:0}
+  .people-panel .plist{max-height:520px;overflow:auto}
+  .pitem{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid #eef1f5;cursor:pointer;font-size:14px}
+  .pitem:hover{background:var(--blue-light)}
+  .pitem .no{color:var(--muted);font-size:12px;width:22px}
+  .pitem .nm{flex:1}
+  .pitem .st{font-size:11px;color:#fff;border-radius:3px;padding:1px 6px}
+  .pitem .st.done{background:#26a269}
+  .pitem .st.todo{background:#c0bfbc}
+  .preview-wrap{overflow:auto;border:1px solid var(--border);background:#e6e8eb;padding:10px;border-radius:6px;max-height:420px}
+  .drag-ghost{position:fixed;z-index:999;background:#1a5fb4;color:#fff;padding:4px 12px;border-radius:4px;font-size:14px;pointer-events:none;box-shadow:0 2px 10px rgba(0,0,0,.3);transform:translate(-50%,-140%);white-space:nowrap}
+  .pitem{touch-action:none}
+  #seat-svg rect[data-seat]{touch-action:none}
+  .hidden{display:none}
+
+  /* ===== 台签页（打印尺寸，A4 纵向 210x297mm） ===== */
+  .sheet{width:210mm;height:296mm;background:#fff;position:relative;overflow:hidden;margin:0 auto}
+  .std-frame{width:190mm;height:178mm;border:1px solid #000;overflow:hidden;position:relative}
+  .std-half{height:89mm;display:flex;align-items:center;justify-content:center;margin:0 6mm} /* 左右各空 6mm（打印机可打印区） */
+  /* 对折参考线：中间两侧各 10mm，中间留空避免压字 */
+  .std-frame::before,.std-frame::after{content:"";position:absolute;top:50%;width:10mm;height:0;border-top:1px solid #000}
+  .std-frame::before{left:0}
+  .std-frame::after{right:0}
+  .std-half .inner{display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .std-half .sign-name,.fold-half .sign-name{white-space:nowrap}   /* 不换行：超宽横向溢出居中，绝不折行竖排 */
+  .std-half.rev{transform:rotate(180deg)}
+  .fold-half{height:148mm;display:flex;align-items:center;justify-content:center}
+  .fold-half .inner{display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .fold-half.rev{transform:rotate(180deg)}
+  .sign-name{line-height:1;font-weight:normal;letter-spacing:0;color:#000}
+  .sign-title{font-size:22pt;color:#000;margin-bottom:10mm;letter-spacing:.1em}
+  .strip-row{border-top:1px dashed #bbb;position:relative}
+  .strip-row:first-child{border-top:none}
+  .strip-half{display:flex;align-items:center;justify-content:center}
+  .strip-half .inner{display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .strip-half.rev{transform:rotate(180deg)}
+  .preview-scale{transform:scale(.32);transform-origin:top left;height:280mm;width:210mm}
+  .preview-holder{width:67mm;height:94mm;overflow:hidden;border:1px solid #999;margin:0 auto}
+
+  /* ===== 打印 ===== */
+  /* 平时隐藏但保持可测量（offsetWidth>0），供 scaleX 压缩前测宽 */
+  .person-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border:1px solid #d0d7de;border-radius:12px;font-size:13px;cursor:pointer;color:#9aa2ad;background:#fafbfc}
+  .person-chip.on{color:#174ea6;background:#eaf3ff;border-color:#8ab4f8}
+  #print-area{position:fixed;left:-10000px;top:0;visibility:hidden}
+  @media print{
+    body{background:#fff}
+    body.print-sign #app,body.print-seat #app{display:none!important}
+    body.print-sign #print-area,body.print-seat #print-area{display:block!important;position:static;visibility:visible}
+    .sheet{page-break-after:always}
+    .sheet:last-child{page-break-after:auto}
+  }
+</style>
+<style id="page-style">@page{size:A4 portrait;margin:0}</style>
+<link rel="stylesheet" href="fonts/xinwei.css">
+</head>
+<body>
+<div id="app">
+<header>
+  <h1>会议台签与座位图助手</h1>
+  <span>名单 → 台签打印 / 座位示意图</span>
+  <button class="btn ghost" id="btn-reset" style="margin-left:auto;align-self:center">恢复默认</button>
+</header>
+<nav>
+  <button data-tab="list" class="active">① 名单</button>
+  <button data-tab="sign">② 台签打印</button>
+  <button data-tab="seat">③ 座位示意图</button>
+</nav>
+<main>
+
+  <!-- 名单 -->
+  <section id="tab-list">
+    <div class="card">
+      <h2>批量导入名单</h2>
+      <p class="hint">每行一人。可只写姓名，或用「姓名｜职务」「姓名,职务」「姓名（空格/tab）职务」同时录入职务。<br>
+      例：<code>张三｜党工委书记</code> 或 <code>李四</code></p>
+      <textarea id="import-text" placeholder="张三｜党工委书记&#10;李四｜办事处主任&#10;王五"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="btn-import-append">追加导入</button>
+        <button class="btn ghost" id="btn-import-replace">替换全部</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>名单（从上到下即礼宾次序，请按序排列）</h2>
+      <table id="people-table">
+        <thead><tr><th style="width:50px">次序</th><th style="width:120px">姓名</th><th>职务</th><th style="width:170px">操作</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="row" style="margin-top:10px">
+        <button class="btn small ghost" id="btn-clear-people">清空名单</button>
+        <span class="hint">按住行上下拖拽调整顺序（也可用 ↑↓）；台签打印顺序、座位自动排位都以此顺序为准。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 台签 -->
+  <section id="tab-sign" class="hidden">
+    <div class="card">
+      <h2>台签设置</h2>
+      <div class="row">
+        <label>样式
+          <select id="sign-mode">
+            <option value="standard" selected>标准模版（190×178mm 方框，上下布局）</option>
+            <option value="fold">对折大台签（1 人 / 页，A4 纵向对折）</option>
+            <option value="strip">紧凑小台签（裁切条，对折立放）</option>
+          </select>
+        </label>
+        <label id="perpage-label" class="hidden">每页条数 <input type="number" id="sign-perpage" min="2" max="8" value="4" style="width:60px"></label>
+        <label>字体
+          <select id="sign-font">
+            <option value='xinwei'>华文新魏（标准模版默认）</option>
+            <option value='hei'>黑体</option>
+            <option value='song'>宋体</option>
+            <option value='kai'>楷体</option>
+          </select>
+        </label>
+        <label>字号(pt) <input type="number" id="sign-size" min="0" max="400" value="0" style="width:70px"></label>
+        <label><input type="checkbox" id="sign-show-title"> 名字上方显示职务小字</label>
+        <label><input type="checkbox" id="sign-bold"> 加粗</label>
+      </div>
+      <p class="hint">标准模版：内容限制在 190×178mm 方框内（A4 居中），上半倒转 + 下半正向（对折立放后两面均正向），华文新魏 <b>155 号</b>（所有名字字号统一，超宽自动横向压缩不换行），沿方框上下对折立放。<br>
+      对折大台签：A4 纵向打印后沿中线对折，立放于桌面，正反两面均可读。紧凑小台签：按虚线裁切后逐条对折。字号填 0 时按模版默认（标准 155pt），也可手动指定。</p>
+    </div>
+    <div class="card">
+      <h2>打印人员</h2>
+      <div class="row" style="align-items:center;gap:8px;margin-bottom:8px">
+        <button class="btn ghost" id="btn-sign-all">全选</button>
+        <button class="btn ghost" id="btn-sign-none">全不选</button>
+        <span class="hint" id="sign-selected-hint"></span>
+      </div>
+      <div id="sign-person-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+    <div class="card">
+      <h2>首页预览</h2>
+      <div class="preview-wrap"><div class="preview-holder"><div id="sign-preview"></div></div></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="btn-print-sign">🖨 打印台签（已选人员）</button>
+    </div>
+  </section>
+
+  <!-- 座位图 -->
+  <section id="tab-seat" class="hidden">
+    <div class="card">
+      <h2>会场模板</h2>
+      <div class="row">
+        <label>布局
+          <select id="seat-template">
+            <option value="stage">主席台（单排）</option>
+            <option value="combo">主席台 + 圆桌</option>
+            <option value="round">圆桌会议</option>
+            <option value="long">长条桌对坐</option>
+            <option value="long3">长条桌3排</option>
+            <option value="long4">长条桌4排</option>
+            <option value="u">U 形会场</option>
+          </select>
+        </label>
+        <label id="stage-count-label">主席台座位 <input type="number" id="seat-stage-count" min="3" max="15" value="7" style="width:60px"></label>
+        <label id="round-count-label">圆桌座位 <input type="number" id="seat-round-count" min="4" max="24" value="10" style="width:60px"></label>
+        <label id="long-count-label">每排座位 <input type="number" id="seat-long-count" min="2" max="20" value="6" style="width:60px"></label>
+        <label id="u-count-label">总座位 <input type="number" id="seat-u-count" min="6" max="30" value="16" style="width:60px"></label>
+        <label><input type="checkbox" id="seat-mirror" checked> 镜像（2 号位换到另一侧）</label>
+      </div>
+      <div class="row">
+        <button class="btn" id="btn-auto-seat">⚡ 按名单顺序一键排座</button>
+        <button class="btn ghost" id="btn-clear-seat">清空座位</button>
+        <button class="btn" id="btn-print-seat">🖨 打印示意图</button>
+        <button class="btn ghost" id="btn-export-png">导出 PNG</button>
+      </div>
+      <p class="hint">自动排位规则：1 号位居中，2 号位默认在 1 号领导左手侧（图面右侧），依次向两侧展开；各地习惯不同可用「镜像」切换。<br>
+      拖拽：<b>把右侧名单中的人直接拖到座位上</b>即指派；<b>拖动座位上的人</b>到另一座位为移动（两人互换）；拖到空白处撤销。也可点击座位选中后点名单指派，双击座位清空。</p>
+    </div>
+    <div class="seat-layout">
+      <div class="seat-svg-wrap"><svg id="seat-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 297 210" style="width:100%;display:block"></svg></div>
+      <div class="card people-panel">
+        <h2>名单（点击指派）</h2>
+        <div class="plist" id="seat-people"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+<div id="print-area"></div>
+
+<script>
+/* ================= 状态（1.0 存档，独立 key 不与 2.0 冲突） ================= */
+const LS_KEY='meeting-signs-v1-archive';
+let state={
+  people:[],                 // {id,name,title}
+  sign:{mode:'standard',perPage:4,size:0,font:'xinwei',showTitle:false,bold:false,excluded:[]},
+  seat:{template:'long',stageCount:7,roundCount:10,longCount:6,uCount:16,mirror:true,assignments:{}}, // seatId -> personId
+  selectedSeat:null
+};
+let nextPid=1;
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify({people:state.people,sign:state.sign,seat:state.seat,nextPid}))}catch(e){}}
+function load(){try{
+  const d=JSON.parse(localStorage.getItem(LS_KEY));
+  if(d&&d.people){
+    state.people=d.people;Object.assign(state.seat,d.seat||{});nextPid=d.nextPid||d.people.length+1;
+    Object.assign(state.sign,d.sign||{});
+  }
+}catch(e){}}
+const uid=()=>'p'+(nextPid++);
+
+/* ================= Tab 切换 ================= */
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));
+  ['list','sign','seat'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
+  document.querySelector('main').classList.toggle('wide',b.dataset.tab==='seat');
+  if(b.dataset.tab==='sign')renderSignPreview();
+  if(b.dataset.tab==='seat')renderSeat();
+}));
+
+/* ================= 名单 ================= */
+function parseLine(line){
+  line=line.trim();if(!line)return null;
+  let name='',title='';
+  const m=line.match(/^([^｜|,，\t]+)(?:[｜|,，\t]+(.*))?$/);
+  name=(m[1]||'').trim();title=(m[2]||'').trim();
+  return {id:uid(),name,title};
+}
+function importPeople(replace){
+  const lines=document.getElementById('import-text').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){alert('请先输入名单');return}
+  const np=lines.map(parseLine).filter(Boolean);
+  state.people=replace?np:state.people.concat(np);
+  document.getElementById('import-text').value='';
+  save();renderPeopleTable();renderSeatPeople();
+}
+document.getElementById('btn-import-append').onclick=()=>importPeople(false);
+document.getElementById('btn-import-replace').onclick=()=>importPeople(true);
+document.getElementById('btn-clear-people').onclick=()=>{if(confirm('确定清空全部名单？')){state.people=[];state.seat.assignments={};save();renderPeopleTable();renderSeatPeople();renderSeat()}};
+
+function renderPeopleTable(){
+  const tb=document.querySelector('#people-table tbody');tb.innerHTML='';
+  state.people.forEach((p,i)=>{
+    const tr=document.createElement('tr');
+    tr.dataset.id=p.id;
+    tr.innerHTML=`<td>${i+1}</td><td>${esc(p.name)}</td><td>${esc(p.title||'')}</td>
+      <td>
+        <button class="btn small ghost" data-act="up" data-id="${p.id}" ${i===0?'disabled':''}>↑</button>
+        <button class="btn small ghost" data-act="down" data-id="${p.id}" ${i===state.people.length-1?'disabled':''}>↓</button>
+        <button class="btn small danger" data-act="del" data-id="${p.id}">删</button>
+      </td>`;
+    tb.appendChild(tr);
+  });
+  if(!state.people.length)tb.innerHTML='<tr><td colspan="4" style="color:#999">（暂无名单，请先导入）</td></tr>';
+  if(typeof renderSignChips==='function')renderSignChips();   // 名单变化同步打印人员勾选
+}
+document.querySelector('#people-table tbody').addEventListener('click',e=>{
+  const btn=e.target.closest('button');if(!btn)return;
+  const id=btn.dataset.id,i=state.people.findIndex(p=>p.id===id);if(i<0)return;
+  if(btn.dataset.act==='up')[state.people[i-1],state.people[i]]=[state.people[i],state.people[i-1]];
+  if(btn.dataset.act==='down')[state.people[i+1],state.people[i]]=[state.people[i],state.people[i+1]];
+  if(btn.dataset.act==='del'){state.people.splice(i,1);for(const k in state.seat.assignments)if(state.seat.assignments[k]===id)delete state.seat.assignments[k];}
+  save();renderPeopleTable();renderSeatPeople();renderSeat();
+});
+
+/* ---- 名单拖拽排序（pointer 事件，桌面 + 触屏通用） ---- */
+let drag=null,dropTarget=null;
+function movePerson(dragId,targetId,pos){ // pos: 'before'|'after'
+  const from=state.people.findIndex(p=>p.id===dragId);
+  if(from<0)return;
+  const [item]=state.people.splice(from,1);
+  let to=state.people.findIndex(p=>p.id===targetId);
+  if(to<0){state.people.splice(from,0,item);return}
+  if(pos==='after')to++;
+  state.people.splice(to,0,item);
+}
+function clearIndicators(){
+  document.querySelectorAll('#people-table tbody tr').forEach(tr=>tr.classList.remove('drop-above','drop-below'));
+}
+document.querySelector('#people-table tbody').addEventListener('pointerdown',e=>{
+  if(e.target.closest('button'))return;             // 按钮列正常点击
+  const tr=e.target.closest('tr[data-id]');
+  if(!tr)return;
+  drag={id:tr.dataset.id,startY:e.clientY,started:false,tr};
+  e.preventDefault();                                // 防止拖出选中文本
+});
+document.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  if(!drag.started){
+    if(Math.abs(e.clientY-drag.startY)<6)return;     // 移动超过 6px 才视为拖拽
+    drag.started=true;
+    drag.tr.classList.add('dragging');
+    document.body.classList.add('drag-active');
+    if(navigator.vibrate)try{navigator.vibrate(10)}catch(_){}
+  }
+  e.preventDefault();
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const tr=el&&el.closest?el.closest('#people-table tbody tr[data-id]'):null;
+  clearIndicators();
+  if(tr&&tr.dataset.id!==drag.id){
+    const rect=tr.getBoundingClientRect();
+    const below=e.clientY>rect.top+rect.height/2;
+    tr.classList.add(below?'drop-below':'drop-above');
+    dropTarget={id:tr.dataset.id,pos:below?'after':'before'};
+  }else dropTarget=null;
+});
+document.addEventListener('pointerup',()=>{
+  if(!drag)return;
+  if(drag.started&&dropTarget){
+    movePerson(drag.id,dropTarget.id,dropTarget.pos);
+    save();renderPeopleTable();renderSeatPeople();renderSeat();
+  }
+  drag.tr.classList.remove('dragging');
+  document.body.classList.remove('drag-active');
+  clearIndicators();
+  drag=null;dropTarget=null;
+});
+document.addEventListener('pointercancel',()=>{
+  if(!drag)return;
+  drag.tr.classList.remove('dragging');
+  document.body.classList.remove('drag-active');
+  clearIndicators();
+  drag=null;dropTarget=null;
+});
+
+/* ================= 台签 ================= */
+const FONTS={xinwei:"'STXinwei','华文新魏','XinWei',serif",
+             hei:"'SimHei','Heiti SC','Source Han Sans SC','PingFang SC',sans-serif",
+             song:"'SimSun','Songti SC',serif",
+             kai:"'KaiTi','Kaiti SC','STKaiti',serif"};
+function autoFontSize(len,mode,perPage){
+  if(mode==='standard')return 155;                         // 标准模版固定 155pt（超宽自动 scaleX 横向压缩，不换行）
+  if(mode==='fold')return len<=2?250:len===3?220:len===4?180:len===5?150:len===6?125:105;
+  const stripH=297/perPage;                       // mm
+  const base=Math.round(stripH*0.42*2.835);       // mm→pt
+  const k=len<=2?1:len===3?.88:len===4?.74:len===5?.6:.5;
+  return Math.round(base*k);
+}
+function signHTML(){
+  const cfg=state.sign;
+  const font=FONTS[cfg.font]||FONTS.xinwei;
+  const ppl=state.people.filter(p=>!cfg.excluded.includes(p.id));  // 勾选的打印人员
+  const mk=(p)=>{
+    const label=p.name.length===2?p.name[0]+'　'+p.name[1]:p.name;  // 2字名中间加全角空格
+    const size=cfg.size>0?cfg.size:autoFontSize(label.length,cfg.mode,cfg.perPage);
+    const titleSize=cfg.mode==='standard'?Math.round(size*.22)+'pt':'';
+    const inner=`<div class="inner">${cfg.showTitle&&p.title?`<div class="sign-title"${titleSize?` style="font-size:${titleSize}"`:''}>${esc(p.title)}</div>`:''}<div class="sign-name" style="font-family:${font};font-size:${size}pt;font-weight:${cfg.bold?700:400}">${esc(label)}</div></div>`;
+    if(cfg.mode==='standard')return `<div class="sheet"><div class="std-frame"><div class="std-half rev">${inner}</div><div class="std-half">${inner}</div></div></div>`;
+    if(cfg.mode==='fold')return `<div class="sheet"><div class="fold-half rev">${inner}</div><div class="fold-half">${inner}</div></div>`;
+    const rowH=(296/cfg.perPage).toFixed(2),halfH=(148/cfg.perPage).toFixed(2);
+    return `<div class="strip-row" style="height:${rowH}mm"><div class="strip-half rev" style="height:${halfH}mm">${inner}</div><div class="strip-half" style="height:${halfH}mm">${inner}</div></div>`;
+  };
+  if(cfg.mode==='fold')return ppl.map(mk).join('');
+  if(cfg.mode==='standard')return ppl.map(mk).join('');
+  const pages=Math.ceil(ppl.length/cfg.perPage);
+  let out='';
+  for(let i=0;i<pages;i++){
+    let inner='';
+    for(let j=0;j<cfg.perPage;j++){const p=ppl[i*cfg.perPage+j];if(p){const lb=p.name.length===2?p.name[0]+'　'+p.name[1]:p.name;const size=cfg.size>0?cfg.size:autoFontSize(lb.length,cfg.mode,cfg.perPage);const f=FONTS[cfg.font]||FONTS.xinwei;const in2=`<div class="inner">${cfg.showTitle&&p.title?`<div class="sign-title" style="font-size:${Math.round(size*.22)}pt">${esc(p.title)}</div>`:''}<div class="sign-name" style="font-family:${f};font-size:${size}pt;font-weight:${cfg.bold?700:400}">${esc(lb)}</div></div>`;const rowH=(296/cfg.perPage).toFixed(2),halfH=(148/cfg.perPage).toFixed(2);inner+=`<div class="strip-row" style="height:${rowH}mm"><div class="strip-half rev" style="height:${halfH}mm">${in2}</div><div class="strip-half" style="height:${halfH}mm">${in2}</div></div>`;}}
+    out+=`<div class="sheet">${inner}</div>`;
+  }
+  return out;
+}
+/* 横向压缩：名字超宽时不换行，scaleX 压扁到框内（同 Word 艺术字横向缩放，字高不变） */
+function applySquash(root){
+  const frame=root.querySelector('.std-frame');
+  if(!frame)return;
+  const avail=frame.offsetWidth-75.59;  // 左右各缩进 10mm（10mm=37.795px @96dpi）
+  root.querySelectorAll('.std-half .sign-name').forEach(el=>{
+    el.style.transform='';
+    el.style.transformOrigin='center center';
+    const w=el.offsetWidth;          // nowrap 下即单行自然宽（布局尺寸，不受祖先 transform 影响）
+    if(w>avail) el.style.transform=`scaleX(${(avail/w).toFixed(4)})`;
+  });
+}
+function renderSignPreview(){
+  const holder=document.getElementById('sign-preview');
+  if(!state.people.length){holder.innerHTML='<p class="hint" style="padding:20px">请先在「名单」页导入人员。</p>';return}
+  const sel=state.people.filter(p=>!state.sign.excluded.includes(p.id));
+  if(!sel.length){holder.innerHTML='<p class="hint" style="padding:20px">未勾选任何打印人员，请在上方「打印人员」中勾选。</p>';return}
+  holder.innerHTML=`<div class="preview-scale">${signHTML()}</div>`;
+  applySquash(holder);
+}
+function printSigns(){
+  const sel=state.people.filter(p=>!state.sign.excluded.includes(p.id));
+  if(!state.people.length){alert('名单为空');return}
+  if(!sel.length){alert('未勾选打印人员');return}
+  const pa=document.getElementById('print-area');
+  pa.innerHTML=signHTML();
+  applySquash(pa);
+  document.getElementById('page-style').textContent='@page{size:A4 portrait;margin:0}';
+  document.body.classList.remove('print-seat');document.body.classList.add('print-sign');
+  window.print();
+}
+document.getElementById('btn-print-sign').onclick=printSigns;
+/* ===== 打印人员勾选 ===== */
+function renderSignChips(){
+  const box=document.getElementById('sign-person-chips'),ex=state.sign.excluded;
+  box.innerHTML=state.people.map(p=>`<label class="person-chip${ex.includes(p.id)?'':' on'}"><input type="checkbox" data-pid="${p.id}"${ex.includes(p.id)?'':' checked'}>${esc(p.name)}</label>`).join('')||'<span class="hint">名单为空</span>';
+  updateSignHint();
+}
+function updateSignHint(){
+  const el=document.getElementById('sign-selected-hint');
+  if(el)el.textContent=`已选 ${state.people.length-state.sign.excluded.length}/${state.people.length} 人`;
+}
+document.getElementById('sign-person-chips').addEventListener('change',e=>{
+  const pid=e.target.dataset.pid;if(!pid)return;
+  if(e.target.checked)state.sign.excluded=state.sign.excluded.filter(x=>x!==pid);
+  else if(!state.sign.excluded.includes(pid))state.sign.excluded.push(pid);
+  e.target.closest('.person-chip').classList.toggle('on',e.target.checked);
+  save();updateSignHint();renderSignPreview();
+});
+document.getElementById('btn-sign-all').onclick=()=>{state.sign.excluded=[];save();renderSignChips();renderSignPreview()};
+document.getElementById('btn-sign-none').onclick=()=>{state.sign.excluded=state.people.map(p=>p.id);save();renderSignChips();renderSignPreview()};
+['sign-mode','sign-perpage','sign-size','sign-font','sign-show-title','sign-bold'].forEach(id=>{
+  const el=document.getElementById(id),evt=id==='sign-mode'||id==='sign-font'?'change':'input';
+  el.addEventListener(evt,()=>{
+    state.sign.mode=document.getElementById('sign-mode').value;
+    if(state.sign.mode==='standard'&&state.sign.font!=='xinwei'){state.sign.font='xinwei';document.getElementById('sign-font').value='xinwei'}
+    state.sign.perPage=clamp(+document.getElementById('sign-perpage').value||4,2,8);
+    state.sign.size=clamp(+document.getElementById('sign-size').value||0,0,400);
+    state.sign.font=document.getElementById('sign-font').value;
+    state.sign.showTitle=document.getElementById('sign-show-title').checked;
+    state.sign.bold=document.getElementById('sign-bold').checked;
+    document.getElementById('perpage-label').classList.toggle('hidden',state.sign.mode!=='strip');
+    save();renderSignPreview();
+  });
+});
+function clamp(v,a,b){return Math.min(b,Math.max(a,v))}
+
+/* ================= 座位图 1.0（SVG 模板版，从 2.0 前最终版存档） ================= */
+function courtesyOrder(n,mirror){ // 返回位置索引数组，第 0 个 = 1 号位；mirror=true：1 号位不变，2 号换到另一侧（左右交替互换；偶数时 1 号正对 1 号，如上3124/下6578）
+  const res=[];
+  if(n%2===1){const c=(n-1)/2;for(let k=0;k<n;k++){
+    if(k===0)res.push(c);
+    else if(k%2===1)res.push(mirror?c-(k+1)/2:c+(k+1)/2);
+    else res.push(mirror?c+k/2:c-k/2);}}
+  else{const a=n/2-1,b=n/2;
+    if(!mirror){for(let k=0;k<n;k++){if(k%2===0)res.push(a-k/2);else res.push(b+(k-1)/2)}}
+    else{res.push(a);let left=a-1,right=b,useLeft=true;   // 左右交替，左侧耗尽顺延右
+      for(let k=1;k<n;k++){
+        if(useLeft&&left>=0)res.push(left--);
+        else res.push(right++);
+        useLeft=!useLeft;}}}
+  return res;
+}
+function ringOrder(n,mirror){ // 圆桌：0=主位(底部中央)，先顺时针邻位，再逆时针交替
+  const res=[0];let l=1,r=n-1;
+  while(res.length<n){res.push(l++);if(res.length<n)res.push(r--)}
+  return mirror?res.map(p=>(n-p)%n):res;
+}
+// 生成座位（SVG mm 坐标 297x210）
+function buildSeats(){
+  const s=state.seat,seats=[];
+  const mkStage=(n,y,prefix)=>{
+    let w=40,gap=4;if(n*40+(n-1)*4>280){w=(280-(n-1)*4)/n;gap=4}
+    const total=n*w+(n-1)*gap,x0=(297-total)/2;
+    for(let i=0;i<n;i++)seats.push({id:prefix+i,x:x0+i*(w+gap),y,w,h:16,kind:'stage'});
+    return courtesyOrder(n,s.mirror).map(pos=>prefix+pos);
+  };
+  const mkRound=(m,cx,cy,r,prefix)=>{
+    for(let i=0;i<m;i++){const ang=(90+i*360/m)*Math.PI/180;
+      seats.push({id:prefix+i,cx:cx+r*Math.cos(ang),cy:cy+r*Math.sin(ang),w:40,h:14,rot:90+i*360/m,kind:'round'})}
+    return ringOrder(m,s.mirror).map(pos=>prefix+pos);
+  };
+  if(s.template==='stage')seats.order=mkStage(s.stageCount,16,'st');
+  else if(s.template==='round')seats.order=mkRound(s.roundCount,148.5,110,42,'rd');
+  else if(s.template==='combo'){seats.order=mkStage(s.stageCount,14,'st').concat(mkRound(s.roundCount,148.5,125,42,'rd'))}
+  else if(s.template==='long'||s.template==='long3'||s.template==='long4'){
+    const n=s.longCount,order=[];
+    // 各排 y：对坐=上1下1；3排=上1下2（下主排后追加）；4排=上2下2（上下各追加后排）
+    const mkRow=(y,prefix,bottom)=>{
+      let w=36,gap=w*0.1;                                  // 空隙=座位框宽的10%
+      if(n*w+(n-1)*gap>250){w=250/(1.1*n-0.1);gap=w*0.1}   // 超宽时等比收缩，总宽≤250mm
+      const total=n*w+(n-1)*gap,x0=(297-total)/2;
+      for(let i=0;i<n;i++)seats.push({id:prefix+i,x:x0+i*(w+gap),y,w,h:15,kind:'long'});
+      return courtesyOrder(n,bottom&&s.mirror).map(p=>prefix+p);
+    };
+    if(s.template==='long4')order.push(...mkRow(16,'lt2',false)); // 上后排：标准序
+    order.push(...mkRow(36,'lt',false));                          // 上主排：标准序（mirror 不作用上侧）
+    order.push(...mkRow(158,'lb',true));                          // 下主排：勾选镜像时整排镜像（偶数保持 1 对 1）
+    if(s.template!=='long')order.push(...mkRow(178,'lb2',true));  // 下后排：跟随下侧
+    seats.order=order;
+  }
+  else if(s.template==='u'){
+    const n=s.uCount,left=Math.ceil((n-2)/2/2),right=Math.floor((n-2)/2/2);
+    const bottom=n-left-right; // ≥2
+    // 底边
+    {let w=34,gap=5;const cnt=bottom;if(cnt*34+(cnt-1)*5>200){w=(200-(cnt-1)*5)/cnt}
+     const total=cnt*w+(cnt-1)*gap,x0=(297-total)/2;
+     for(let i=0;i<cnt;i++)seats.push({id:'ub'+i,x:x0+i*(w+gap),y:168,w,h:15,kind:'u'});}
+    // 左右
+    for(let i=0;i<left;i++)seats.push({id:'ul'+i,x:26,y:40+i*(120/Math.max(left,1)),w:15,h:30,kind:'u'});
+    for(let i=0;i<right;i++)seats.push({id:'ur'+i,x:256,y:40+i*(120/Math.max(right,1)),w:15,h:30,kind:'u'});
+    // 礼宾序：底边 courtesy，然后左右从底往上交替
+    const ord=courtesyOrder(bottom,s.mirror).map(p=>'ub'+p);
+    const maxlr=Math.max(left,right);
+    for(let i=0;i<maxlr;i++){if(i<left)ord.push('ul'+(left-1-i));if(i<right)ord.push('ur'+(right-1-i))}
+    seats.order=ord;
+  }
+  return seats;
+}
+function seatFont(len,w){ // w=座位框宽(mm)时按框缩字：名字实际宽≈len×fs×0.3528mm，框内留 1mm 边
+  let fs=len<=3?10.5:len===4?9:len<=6?7.5:6.5;
+  if(w&&len>2)fs=Math.min(fs,(w-2)/(len*0.3528));
+  return Math.max(fs,4);
+}
+function renderSeat(){
+  const seats=buildSeats(),svg=document.getElementById('seat-svg');
+  const s=state.seat,A=s.assignments;
+  const personOf=id=>state.people.find(p=>p.id===A[id]);
+  let g='';
+  // 桌面/舞台
+  if(s.template==='stage'||s.template==='combo'){
+    const n=s.stageCount;let w=40,gap=4;if(n*40+(n-1)*4>280)w=(280-(n-1)*4)/n;
+    const total=n*w+(n-1)*gap,x0=(297-total)/2;
+    g+=`<rect x="${x0-6}" y="34" width="${total+12}" height="10" rx="2" fill="#d5dce6" stroke="#9aa5b1"/>`;
+    g+=`<text x="148.5" y="52" text-anchor="middle" font-size="7" fill="#666">（主席台）</text>`;
+  }
+  if(s.template==='round'||s.template==='combo'){
+    g+=`<ellipse cx="148.5" cy="${s.template==='combo'?125:110}" rx="42" ry="30" fill="#d5dce6" stroke="#9aa5b1"/>`;
+  }
+  if(s.template==='long'||s.template==='long3'||s.template==='long4'){
+    g+=`<rect x="64" y="56" width="169" height="97" rx="3" fill="#d5dce6" stroke="#9aa5b1"/>`;
+  }
+  if(s.template==='u'){
+    g+=`<path d="M 40 45 L 40 172 L 257 172 L 257 45" fill="none" stroke="#d5dce6" stroke-width="26" stroke-linecap="square"/>`;
+    g+=`<path d="M 40 45 L 40 172 L 257 172 L 257 45" fill="none" stroke="#9aa5b1" stroke-width="1"/>`;
+  }
+  // 座位
+  seats.forEach(st=>{
+    const p=personOf(st.id),sel=state.selectedSeat===st.id;
+    const body=p?esc(p.name):'空位';
+    const len=p?p.name.length:2;
+    const fill=p?'#e8f0fe':'#fff',stroke=sel?'#1a5fb4':'#666',sw=sel?1.6:0.7;
+    const pidInList=p?state.people.indexOf(p)+1:'';
+    if(st.kind==='round'){
+      const t=st.rot%360;
+      const flip=(t>90&&t<270)?180:0; // 保证文字不倒
+      const rot=flip?t+180:t;
+      g+=`<g transform="rotate(${st.rot} ${st.cx} ${st.cy})"><rect data-seat="${st.id}" x="${st.cx-st.w/2}" y="${st.cy-st.h/2}" width="${st.w}" height="${st.h}" rx="1.5" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" style="cursor:pointer"/></g>`;
+      g+=`<g transform="rotate(${rot} ${st.cx} ${st.cy})"><text x="${st.cx}" y="${st.cy}" text-anchor="middle" dominant-baseline="central" font-size="${seatFont(len,st.w)}" font-weight="${p?600:400}" fill="${p?'#1a5fb4':'#bbb'}">${body}</text></g>`;
+    }else{
+      g+=`<rect x="${st.x}" y="${st.y}" width="${st.w}" height="${st.h}" rx="1.5" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" data-seat="${st.id}" style="cursor:pointer"/>`;
+      const fs=seatFont(len,st.w);
+      g+=`<text x="${st.x+st.w/2}" y="${st.y+st.h/2}" text-anchor="middle" dominant-baseline="central" font-size="${fs}" font-weight="${p?600:400}" fill="${p?'#1a5fb4':'#bbb'}" pointer-events="none">${body}</text>`;
+      if(p&&fs>=5)g+=`<text x="${st.x+st.w-1.5}" y="${st.y+2.6}" text-anchor="end" font-size="3.4" fill="#999" pointer-events="none">${pidInList}</text>`;
+    }
+  });
+  // 标题
+  g+=`<text x="148.5" y="9" text-anchor="middle" font-size="9" font-weight="700" fill="#333">会场座位示意图</text>`;
+  svg.innerHTML=g;
+  svg.querySelectorAll('rect[data-seat]').forEach(r=>{
+    r.addEventListener('click',()=>{if(suppressClick)return;state.selectedSeat=state.selectedSeat===r.dataset.seat?null:r.dataset.seat;renderSeat()});
+    r.addEventListener('dblclick',()=>{if(suppressClick)return;delete state.seat.assignments[r.dataset.seat];save();renderSeat();renderSeatPeople()});
+  });
+}
+/* ---- 座位图拖拽：名单→座位=指派；座位→座位=移动/互换；拖到空白=撤销 ---- */
+let seatDrag=null,seatHl=null,suppressClick=false;
+function seatHit(cx,cy){
+  const svg=document.getElementById('seat-svg');
+  const pt=new DOMPoint(cx,cy).matrixTransform(svg.getScreenCTM().inverse());
+  const seats=buildSeats();
+  for(const st of seats){
+    if(st.kind==='round'){if(Math.abs(pt.x-st.cx)<=st.w/2+2&&Math.abs(pt.y-st.cy)<=st.h/2+2)return st}
+    else{if(pt.x>=st.x&&pt.x<=st.x+st.w&&pt.y>=st.y&&pt.y<=st.y+st.h)return st}
+  }
+  return null;
+}
+function seatRectEl(id){return document.querySelector(`#seat-svg rect[data-seat="${id}"]`)}
+function hlSeat(id,on){
+  const r=seatRectEl(id);if(!r)return;
+  if(on){r.setAttribute('stroke','#c01c28');r.setAttribute('stroke-width','1.8')}
+  else{const seats=buildSeats(),A=state.seat.assignments,p=A&&A[id];
+    r.setAttribute('stroke',state.selectedSeat===id?'#1a5fb4':(p?'#666':'#666'));
+    r.setAttribute('stroke-width',state.selectedSeat===id?'1.6':'0.7')}
+}
+function makeGhost(name){const g=document.createElement('div');g.className='drag-ghost';g.textContent=name;document.body.appendChild(g);return g}
+document.getElementById('seat-people').addEventListener('pointerdown',e=>{
+  const it=e.target.closest('.pitem');if(!it)return;
+  seatDrag={type:'list',personId:it.dataset.id,sx:e.clientX,sy:e.clientY,started:false,ghost:null};
+  e.preventDefault();
+});
+document.getElementById('seat-svg').addEventListener('pointerdown',e=>{
+  const r=e.target.closest('rect[data-seat]');if(!r)return;
+  const pid=state.seat.assignments[r.dataset.seat];if(!pid)return;   // 只有已排人的座位可拖
+  seatDrag={type:'seat',personId:pid,seatId:r.dataset.seat,sx:e.clientX,sy:e.clientY,started:false,ghost:null};
+  e.preventDefault();
+});
+document.addEventListener('pointermove',e=>{
+  if(!seatDrag)return;
+  if(!seatDrag.started){
+    if(Math.abs(e.clientX-seatDrag.sx)<6&&Math.abs(e.clientY-seatDrag.sy)<6)return;
+    seatDrag.started=true;
+    const p=state.people.find(x=>x.id===seatDrag.personId);
+    seatDrag.ghost=makeGhost(p?p.name:'');
+    if(seatDrag.type==='seat'){const r=seatRectEl(seatDrag.seatId);if(r)r.setAttribute('opacity','.35')}
+  }
+  seatDrag.ghost.style.left=e.clientX+'px';seatDrag.ghost.style.top=e.clientY+'px';
+  const st=seatHit(e.clientX,e.clientY);
+  const valid=st&&!(seatDrag.type==='seat'&&st.id===seatDrag.seatId);
+  if(seatHl&&(!valid||st.id!==seatHl)){hlSeat(seatHl,false);seatHl=null}
+  if(valid&&st.id!==seatHl){hlSeat(st.id,true);seatHl=st.id}
+  e.preventDefault();
+});
+function endSeatDrag(e){
+  if(!seatDrag)return;
+  const d=seatDrag;seatDrag=null;
+  if(d.ghost)d.ghost.remove();
+  if(d.type==='seat'){const r=seatRectEl(d.seatId);if(r)r.removeAttribute('opacity')}
+  if(seatHl){hlSeat(seatHl,false);seatHl=null}
+  if(!d.started)return;
+  suppressClick=true;setTimeout(()=>suppressClick=false,60);
+  const st=e?seatHit(e.clientX,e.clientY):null;
+  const A=state.seat.assignments;
+  if(d.type==='list'){
+    if(st){for(const k in A)if(A[k]===d.personId)delete A[k];A[st.id]=d.personId}
+  }else{
+    if(st&&st.id!==d.seatId){
+      const occ=A[st.id]||null;
+      A[st.id]=d.personId;
+      if(occ)A[d.seatId]=occ;else delete A[d.seatId];
+    }else if(!st){
+      delete A[d.seatId];   // 拖到空白处 = 撤销排座
+    }
+  }
+  save();renderSeat();renderSeatPeople();
+}
+document.addEventListener('pointerup',endSeatDrag);
+document.addEventListener('pointercancel',()=>endSeatDrag(null));
+/* ---- 一键排座 / 清空 / 指派 ---- */
+document.getElementById('btn-auto-seat').onclick=()=>{
+  const seats=buildSeats();
+  const A=state.seat.assignments={};
+  seats.order.forEach((id,i)=>{const p=state.people[i];if(p)A[id]=p.id});
+  save();renderSeat();renderSeatPeople();
+};
+document.getElementById('btn-clear-seat').onclick=()=>{state.seat.assignments={};save();renderSeat();renderSeatPeople()};
+function renderSeatPeople(){
+  const box=document.getElementById('seat-people');
+  const used=new Set(Object.values(state.seat.assignments));
+  box.innerHTML=state.people.map((p,i)=>`
+    <div class="pitem" data-id="${p.id}">
+      <span class="no">${i+1}</span><span class="nm">${esc(p.name)}</span>
+      <span class="st ${used.has(p.id)?'done':'todo'}">${used.has(p.id)?'已排':'未排'}</span>
+    </div>`).join('')||'<p class="hint" style="padding:10px">（名单为空）</p>';
+  box.querySelectorAll('.pitem').forEach(el=>el.addEventListener('click',()=>{if(!suppressClick)assignPerson(el.dataset.id)}));
+}
+function assignPerson(pid){
+  const seats=buildSeats();
+  let target=state.selectedSeat;
+  if(!target){target=seats.order.find(id=>!state.seat.assignments[id]);}
+  if(!target){alert('没有空座位了');return}
+  for(const k in state.seat.assignments)if(state.seat.assignments[k]===pid)delete state.seat.assignments[k];
+  state.seat.assignments[target]=pid;
+  state.selectedSeat=null;
+  save();renderSeat();renderSeatPeople();
+}
+/* ---- 打印 / 导出 PNG ---- */
+document.getElementById('btn-print-seat').onclick=()=>{
+  document.getElementById('print-area').innerHTML='';
+  const svg=document.getElementById('seat-svg').cloneNode(true);
+  svg.setAttribute('width','297mm');svg.setAttribute('height','210mm');
+  svg.querySelectorAll('rect').forEach(r=>r.removeAttribute('style'));
+  document.getElementById('print-area').appendChild(svg);
+  document.body.classList.add('print-seat');
+  window.print();
+};
+document.getElementById('btn-export-png').onclick=()=>{
+  const svg=document.getElementById('seat-svg').cloneNode(true);
+  svg.setAttribute('width','2970');svg.setAttribute('height','2100');
+  svg.querySelectorAll('rect').forEach(r=>r.removeAttribute('style'));
+  const data=new XMLSerializer().serializeToString(svg);
+  const blob=new Blob([data],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob);
+  const img=new Image();
+  img.onload=()=>{
+    const c=document.createElement('canvas');c.width=2970;c.height=2100;
+    c.getContext('2d').drawImage(img,0,0,2970,2100);
+    URL.revokeObjectURL(url);
+    c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='会场座位示意图.png';a.click()});
+  };
+  img.src=url;
+};
+['seat-template','seat-stage-count','seat-round-count','seat-long-count','seat-u-count','seat-mirror'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener(el.type==='checkbox'?'change':el.tagName==='SELECT'?'change':'input',()=>{
+    const s=state.seat;
+    s.template=document.getElementById('seat-template').value;
+    s.stageCount=clamp(+document.getElementById('seat-stage-count').value||7,3,15);
+    s.roundCount=clamp(+document.getElementById('seat-round-count').value||10,4,24);
+    s.longCount=clamp(+document.getElementById('seat-long-count').value||6,2,20);
+    s.uCount=clamp(+document.getElementById('seat-u-count').value||16,6,30);
+    s.mirror=document.getElementById('seat-mirror').checked;
+    // 清掉不属于当前模板的指派
+    const prefix={stage:'st',combo:'st|rd',round:'rd',long:'lt2|lt|lb|lb2',long3:'lt2|lt|lb|lb2',long4:'lt2|lt|lb|lb2',u:'ub|ul|ur'}[s.template];
+    for(const k in s.assignments)if(!new RegExp('^('+prefix+')').test(k))delete s.assignments[k];
+    toggleSeatInputs();save();renderSeat();
+  });
+});
+function toggleSeatInputs(){
+  const t=state.seat.template;
+  document.getElementById('stage-count-label').style.display=(t==='stage'||t==='combo')?'':'none';
+  document.getElementById('round-count-label').style.display=(t==='round'||t==='combo')?'':'none';
+  document.getElementById('long-count-label').style.display=(t==='long'||t==='long3'||t==='long4')?'':'none';
+  document.getElementById('u-count-label').style.display=t==='u'?'':'none';
+}
+window.addEventListener('afterprint',()=>{document.body.classList.remove('print-sign','print-seat')});
+
+/* ================= 工具 ================= */
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+/* ================= 启动 ================= */
+function syncUI(){
+  document.getElementById('sign-mode').value=state.sign.mode;
+  document.getElementById('sign-perpage').value=state.sign.perPage;
+  document.getElementById('sign-size').value=state.sign.size;
+  document.getElementById('sign-font').value=state.sign.font;
+  document.getElementById('sign-show-title').checked=state.sign.showTitle;
+  document.getElementById('sign-bold').checked=!!state.sign.bold;
+  document.getElementById('seat-template').value=state.seat.template;
+  document.getElementById('seat-stage-count').value=state.seat.stageCount;
+  document.getElementById('seat-round-count').value=state.seat.roundCount;
+  document.getElementById('seat-long-count').value=state.seat.longCount;
+  document.getElementById('seat-u-count').value=state.seat.uCount;
+  document.getElementById('seat-mirror').checked=state.seat.mirror;
+  document.getElementById('perpage-label').classList.toggle('hidden',state.sign.mode!=='strip');
+  toggleSeatInputs();
+}
+load();save();   // load 后立即回写，v1 老数据自动迁移为 v2
+syncUI();
+renderPeopleTable();renderSeatPeople();renderSeat();renderSignPreview();
+// 字体异步加载完成后重测字高并刷新预览（首屏测量可能发生在字体就绪前）
+document.fonts.ready.then(()=>renderSignPreview());
+/* 恢复默认：台签/座位设置与排座结果全部重置，名单保留 */
+document.getElementById('btn-reset').onclick=()=>{
+  if(!confirm('除名单外的全部设置（台签样式、座位模板、排座结果）将恢复默认，确定？'))return;
+  state.sign={mode:'standard',perPage:4,size:0,font:'xinwei',showTitle:false,bold:false,excluded:[]};
+  state.seat={template:'long',stageCount:7,roundCount:10,longCount:6,uCount:16,mirror:true,assignments:{}};
+  state.selectedSeat=null;
+  save();syncUI();
+  renderPeopleTable();renderSeatPeople();renderSeat();renderSignPreview();renderSignChips();
+};
+</script>
+</body>
+</html>
