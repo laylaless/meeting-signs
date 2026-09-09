@@ -1,5 +1,7 @@
 # 会议台签与座位图助手
 
+[在线访问](https://laylaless.github.io/meeting-signs/)
+
 单文件 Web 应用（`index.html` + `fonts/` 字体目录），零依赖、无需安装、无需联网。用于会议筹备时：
 
 1. **台签打印** —— 按名单批量生成桌牌，直接用浏览器打印
