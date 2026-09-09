@@ -1,2 +1,3 @@
 *.png
 *.py
+legacy_tests/
