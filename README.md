@@ -1,8 +1,13 @@
 # 会议台签与座位图助手
 
-[在线访问](https://laylaless.github.io/meeting-signs/)
+[在线访问（新版 v0.3.0）](https://laylaless.github.io/meeting-signs/index3.html) ｜ [旧版 v0.2.20（存档）](https://laylaless.github.io/meeting-signs/)
 
-单文件 Web 应用（`index.html` + `fonts/` 字体目录），零依赖、无需安装、无需联网，为会议筹备提供三件事：
+自 v0.3.0 起提供**两个并存版本**，同源共用浏览器数据（localStorage 键不变），来回切换数据互通：
+
+- **新版 `index3.html`（v0.3.0）**：Vue 3 + Vite + shadcn-vue（Tailwind CSS v4）重构，功能与旧版完全对齐，界面为 shadcn 默认现代风
+- **旧版 `index.html`（v0.2.20）**：单文件零依赖版原样保留，双击即用；`index_v1.html` 为 1.0 存档
+
+为会议筹备提供三件事：
 
 1. **台签打印** —— 按名单批量生成桌牌，浏览器直接打印
 2. **座位示意图** —— 三种桌型自由布局 + 礼宾序自动排位，可打印 / 导出 PNG
@@ -12,7 +17,8 @@
 
 ## 快速开始
 
-- 双击打开 `index.html` 即可（推荐 Chrome / Edge），也可放内网共享目录发给同事
+- **新版**：在线访问上方链接；离线使用时把构建产物 **`dist/` 整个文件夹**拷到内网共享目录 / U 盘，双击其中 `index3.html` 即可（file:// 下正常加载，需带上同目录 `fonts/`）
+- **旧版**：双击打开 `index.html`（推荐 Chrome / Edge）
 - **分发必须带上 `fonts/` 文件夹**：内置华文中宋、华文新魏、曾柏求新魏碑简体字体（@font-face 加载），目标电脑没装字体也能正常显示；若确认对方装有 Office 相关字体也可不带（自动回退系统字体）
 - 通过网页服务器（如内网 http）访问时，点击版本号可直接读取同目录 `UPDATE.md` 更新记录；双击直接打开时显示内置同步记录
 
@@ -115,5 +121,10 @@
 
 ## 开发
 
-- 测试：`python3 test_banner.py`（会标 19 项）、`python3 test_smoke.py` 等，需本地 playwright + Chrome
-- 版本维护：改 `UPDATE.md` → 改 `index.html` 中 `#app-ver` 版本号 → `python3 sync_log.py`（把 UPDATE.md 同步为内置兜底记录）
+自 v0.3.0 起仓库为 Vite 工程（Node 22+）：
+
+- 本地开发：`npm install` → `npm run dev`（访问 `http://localhost:5173/index3.html`；根路径 `/` 是旧版 index.html，也可对照）
+- 构建：`npm run build`（含类型检查；产物在 `dist/`——入口 `index3.html`，并把旧版 `index.html` / `index_v1.html` / `fonts/` / `UPDATE.md` 一并复制进去，dist 整体拷走即可离线分发）
+- 发布：**push main 即自动部署**（GitHub Actions 构建 dist 并发布 Pages，无需本地构建提交）
+- 测试：`python3 test_smoke.py`、`python3 test_import_split.py`、`python3 test_rename.py`、`python3 test_pageflip.py`、`python3 test_banner.py`（共 50 项断言；先 `npm run build`，测试跑的是 `dist/index3.html`，经 `window.__MS__` 读写应用状态），需本地 playwright + Chrome
+- 版本维护：改 `UPDATE.md` → 改 `src/constants.ts` 的 `APP_VERSION` 与 `package.json` 的 `version` → `npm run build` → `python3 sync_log.py`（把 UPDATE.md 同步为内置兜底记录）；旧版 `index.html` 自 0.3.0 起冻结不再维护

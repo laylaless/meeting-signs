@@ -1,0 +1,12 @@
+@font-face {
+  font-family: 'WebZhongSong';
+  src: url('STZHONGS.ttf') format('truetype');
+  font-display: swap
+}
+
+/* 台签备选字体：方正字迹-曾柏求新魏碑简体（自托管） */
+@font-face {
+  font-family: 'FZQiuXinWeiBei';
+  src: url('FZZJ-ZBQXWBJW.TTF') format('truetype');
+  font-display: swap
+}

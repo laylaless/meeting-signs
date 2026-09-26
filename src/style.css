@@ -1,0 +1,447 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.141 0.005 285.823);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.141 0.005 285.823);
+  --primary: oklch(0.21 0.006 285.885);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.552 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.705 0.015 286.067);
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.92 0.004 286.32);
+  --primary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.552 0.016 285.938);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ==================================================================
+   以下为自 v0.2.20 原生版移植的功能样式（打印 / 台签纸张 / 会标画面），
+   与打印输出、DOM 测量（scaleX 压缩）强相关，保持类名与数值不变。
+   ================================================================== */
+
+/* ===== 台签页（打印尺寸，A4 纵向 210x297mm） ===== */
+.sheet {
+  width: 210mm;
+  height: 296mm;
+  background: #fff;
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto
+}
+
+.std-frame {
+  width: 190mm;
+  height: 178mm;
+  border: 1px solid #000;
+  overflow: hidden;
+  position: relative
+}
+
+.std-half {
+  height: 89mm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 6mm
+}
+
+/* 左右各空 6mm（打印机可打印区）；对折参考线：中间两侧各 10mm，中间留空避免压字 */
+.std-frame::before,
+.std-frame::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 10mm;
+  height: 0;
+  border-top: 1px solid #000
+}
+
+.std-frame::before { left: 0 }
+.std-frame::after { right: 0 }
+
+/* 190×178 / 琴川195 台签纸：纸张即台签，不画对折示意线 */
+.std-frame.nofold::before,
+.std-frame.nofold::after {
+  content: none
+}
+
+.std-half .inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center
+}
+
+.std-half .sign-name,
+.fold-half .sign-name,
+.t200-name .sign-name {
+  white-space: nowrap
+}
+
+.std-half.rev { transform: rotate(180deg) }
+
+.fold-half {
+  height: 148mm;
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+.fold-half .inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center
+}
+
+.fold-half.rev { transform: rotate(180deg) }
+
+.sign-name {
+  line-height: 1;
+  font-weight: normal;
+  letter-spacing: 0;
+  color: #000
+}
+
+.sign-title {
+  font-size: 22pt;
+  color: #000;
+  margin-bottom: 10mm;
+  letter-spacing: .1em
+}
+
+.strip-row {
+  border-top: 1px dashed #bbb;
+  position: relative
+}
+
+.strip-row:first-child { border-top: none }
+
+.strip-half {
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+.strip-half .inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center
+}
+
+.strip-half.rev { transform: rotate(180deg) }
+
+/* 200×120 桌签：120mm 宽 × 200mm 高，1 列 4 行（1、4 行空白 40mm，2、3 行名字行 60mm），沿中线对折立放 */
+.t200-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden
+}
+
+.t200-blank { height: 40mm }
+
+.t200-name {
+  height: 60mm;
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+.t200-name .inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center
+}
+
+.t200-name.rev { transform: rotate(180deg) }
+
+/* 座位签：A4 横向 1 行 5 列（每列 55mm，页宽剩余 22mm 空白），名字竖排逐字下行，列间虚线裁切 */
+.seat-sheet {
+  display: flex;
+  flex-direction: row
+}
+
+.seat-col {
+  width: 55mm;
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+.seat-col + .seat-col { border-left: 1px dashed #bbb }
+.seat-col:last-child { border-right: 1px dashed #bbb }
+
+.preview-scale {
+  transform: scale(.32);
+  transform-origin: top left;
+  height: 280mm;
+  width: 210mm
+}
+
+.preview-holder {
+  width: 67mm;
+  height: 94mm;
+  overflow: hidden;
+  border: 1px solid #999;
+  margin: 0 auto
+}
+
+/* ===== 打印：平时 #print-area 隐藏但保持可测量（offsetWidth>0），供 scaleX 压缩前测宽 ===== */
+#print-area {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  visibility: hidden
+}
+
+@media print {
+  body { background: #fff }
+
+  body.print-sign #app,
+  body.print-sign #app-main,
+  body.print-seat #app,
+  body.print-seat #app-main {
+    display: none !important
+  }
+
+  body.print-sign #print-area,
+  body.print-seat #print-area {
+    display: block !important;
+    position: static;
+    visibility: visible
+  }
+
+  .sheet { page-break-after: always }
+  .sheet:last-child { page-break-after: auto }
+}
+
+/* ===== 打印人员勾选 chips ===== */
+.person-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #9aa2ad;
+  background: #fafbfc
+}
+
+.person-chip.on {
+  color: #174ea6;
+  background: #eaf3ff;
+  border-color: #8ab4f8
+}
+
+/* ===== 名单表格拖拽排序 ===== */
+#people-table tr.drop-above td { border-top: 2px solid #3b82f6 }
+#people-table tr.drop-below td { border-bottom: 2px solid #3b82f6 }
+#people-table tr.dragging { opacity: .35 }
+body.drag-active { user-select: none }
+
+/* ===== 座位页名单 chip ===== */
+.pchip {
+  border-color: var(--border);
+  background: var(--card)
+}
+
+.pchip.on {
+  border-color: #8ab4f8;
+  background: #eaf3ff
+}
+
+.pchip.flash { animation: pchip-flash .6s }
+
+@keyframes pchip-flash {
+  0%, 100% { box-shadow: none }
+  50% { box-shadow: 0 0 0 3px rgba(59, 130, 246, .45) }
+}
+
+/* ===== 会标 ===== */
+.bn-drag-tip {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, .65);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5
+}
+
+.sw {
+  width: 26px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0
+}
+
+.bn-ratio {
+  border: 1px solid var(--border);
+  background: var(--background);
+  border-radius: 5px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px
+}
+
+.bn-ratio.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600
+}
+
+.bn-stage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative
+}
+
+#bn-preview .bn-title,
+#bn-preview .bn-date {
+  cursor: ns-resize;
+  user-select: none;
+  -webkit-user-select: none
+}
+
+#bn-full .bn-title,
+#bn-full .bn-date {
+  cursor: default
+}
+
+.bn-stage pre.bn-title {
+  margin: 0;
+  position: absolute;
+  top: 25%;
+  left: 0;
+  right: 0;
+  white-space: pre;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center
+}
+
+.bn-stage .bn-date {
+  position: absolute;
+  bottom: 15%;
+  left: 0;
+  right: 0;
+  line-height: 1.2;
+  text-align: center
+}
+
+#bn-full {
+  display: none;
+  background: #000;
+  position: relative
+}
+
+#bn-full:fullscreen { display: block }
+
+#bn-full:fullscreen .bn-stage {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+  max-height: none;
+  border-radius: 0
+}
+
+#bn-full-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, .75);
+  background: rgba(0, 0, 0, .35);
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity .4s;
+  pointer-events: none
+}
+
+#bn-full:fullscreen #bn-full-hint { opacity: 1 }
+#bn-full.hint-fade #bn-full-hint { opacity: 0 }
+
