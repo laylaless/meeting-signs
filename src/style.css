@@ -268,9 +268,9 @@
 @media print {
   body { background: #fff }
 
-  body.print-sign #app,
+  /* 注意：#print-area 与 #app-main 同为挂载容器 #app 的子节点，
+     只能藏 #app-main —— 若把 #app 藏掉会连 print-area 一起 display:none，打印全空白 */
   body.print-sign #app-main,
-  body.print-seat #app,
   body.print-seat #app-main {
     display: none !important
   }

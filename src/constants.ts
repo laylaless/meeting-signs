@@ -1,6 +1,6 @@
 import type { FontKey, SignMode } from './types'
 
-export const APP_VERSION = 'v0.3.0'
+export const APP_VERSION = 'v0.3.1'
 
 export const LS_KEY = 'meeting-signs-v4'
 export const VENUES_KEY = 'meeting-signs-venues'
