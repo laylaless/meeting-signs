@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { LS_KEY, VENUES_KEY } from './constants'
 import type { Banner, BannersState, Person, SignConfig, VenueLibItem, VenueState } from './types'
 
-/* 首个会标 66/30 大字号，其余默认 32/24；所有默认样式与第一个一致 */
+/* 首个会标 75/30 大字号，其余默认 32/24；所有默认样式与第一个一致 */
 export function defaultBanner(titleSize?: number, dateSize?: number): Banner {
   const t = new Date()
   return {
@@ -25,7 +25,7 @@ export function defaultVenue(): VenueState {
 }
 
 export function defaultBanners(): BannersState {
-  return { list: [defaultBanner(66, 30), defaultBanner()], sel: 0 }
+  return { list: [defaultBanner(75, 30), defaultBanner()], sel: 0 }
 }
 
 export function loadVenues(): VenueLibItem[] {
