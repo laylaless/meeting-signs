@@ -41,6 +41,22 @@ export function bnShadowCss(b: Banner, k: number) {
   return `${x}px ${y}px ${bl}px rgba(${r},${g},${bb},${(1 - (Number(s.opacity) || 0) / 100).toFixed(2)})`
 }
 
+/* 逐字横向缩放（书法式瘦长）：每个字单独包 inline-block span 各自 scaleX、比例一致，
+   字与字的间距（letter-spacing）不参与缩放——整行不会缩成一团聚在中间；
+   默认 100% 不拆 span，保持纯文本节点（transform 仍留给元素自身的 translateY） */
+function scaleChars(el: HTMLElement, text: string, sx: number) {
+  if (sx === 1) { el.textContent = text; return }
+  const frag = document.createDocumentFragment()
+  for (const ch of text) {
+    if (ch === '\n') { frag.appendChild(document.createTextNode('\n')); continue }
+    const s = document.createElement('span')
+    s.textContent = ch
+    s.style.cssText = `display:inline-block;transform:scaleX(${sx})`
+    frag.appendChild(s)
+  }
+  el.appendChild(frag)
+}
+
 /* 画面渲染：一切按画面高度/1080 等比（k = clientHeight/1080，pt→px 系数 4/3），
    字号/间距/偏移/阴影全部乘 k —— 预览、全屏、任意屏幕比例下视觉占比恒定 */
 export function bnRenderStage(el: HTMLElement, b: Banner) {
@@ -50,17 +66,15 @@ export function bnRenderStage(el: HTMLElement, b: Banner) {
   const fam = bnFont(b)   // 完整回退串（每项自带引号），不能再整体包引号，否则会被解析成一个非法字体名
   const sp = (b.spacing == null ? 3 : b.spacing) * 4 / 3 * k
   const lh = String(b.lineH == null ? 1.5 : b.lineH)
-  // 横向缩放（竖向不变）：元素全宽居中，绕中心 scaleX，文字仍水平居中；默认 100 不输出，保持 transform 纯 translateY
-  const sx = (b.scaleX == null ? 100 : b.scaleX) / 100
-  const sxPart = sx === 1 ? '' : ` scaleX(${sx})`
+  const sx = (b.scaleX == null ? 100 : b.scaleX) / 100   // 横向缩放百分比（竖向不变）
   const t = document.createElement('pre')
   t.className = 'bn-title'
-  t.textContent = b.title || ''
-  t.style.cssText = `font-family:${fam};color:${b.fg};font-size:${(b.titleSize * 4 / 3 * k).toFixed(2)}px;text-shadow:${bnShadowCss(b, k)};transform:translateY(${((b.titleOff || 0) * 4 / 3 * k).toFixed(1)}px)${sxPart};letter-spacing:${sp.toFixed(2)}px;line-height:${lh}`
+  t.style.cssText = `font-family:${fam};color:${b.fg};font-size:${(b.titleSize * 4 / 3 * k).toFixed(2)}px;text-shadow:${bnShadowCss(b, k)};transform:translateY(${((b.titleOff || 0) * 4 / 3 * k).toFixed(1)}px);letter-spacing:${sp.toFixed(2)}px;line-height:${lh}`
+  scaleChars(t, b.title || '', sx)
   el.appendChild(t)
   const d = document.createElement('div')
   d.className = 'bn-date'
-  d.textContent = isoToCN(b.date)
-  d.style.cssText = `font-family:${fam};color:${b.fg};font-size:${(b.dateSize * 4 / 3 * k).toFixed(2)}px;text-shadow:${bnShadowCss(b, k)};transform:translateY(${((b.dateOff || 0) * 4 / 3 * k).toFixed(1)}px)${sxPart};letter-spacing:${sp.toFixed(2)}px;line-height:${lh}`
+  d.style.cssText = `font-family:${fam};color:${b.fg};font-size:${(b.dateSize * 4 / 3 * k).toFixed(2)}px;text-shadow:${bnShadowCss(b, k)};transform:translateY(${((b.dateOff || 0) * 4 / 3 * k).toFixed(1)}px);letter-spacing:${sp.toFixed(2)}px;line-height:${lh}`
+  scaleChars(d, isoToCN(b.date), sx)
   el.appendChild(d)
 }
