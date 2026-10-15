@@ -162,14 +162,14 @@ function onPreviewPointercancel() { drag = null; tipVisible.value = false }
                 @change="clampNum('dateSize', 8, 300, 24)" /> 号</Label>
             <Label class="flex items-center gap-1" title="字与字的间距：正数拉开、负数收紧（负值时字会叠近）">字间距
               <Input id="bn-spacing" type="number" min="-50" max="100" step="0.5" v-model.number="cur.spacing" class="h-8 w-[60px]"
-                @change="clampNum('spacing', -50, 100, 3)" /> pt</Label>
+                @change="clampNum('spacing', -50, 100, 0)" /> pt</Label>
             <Label class="flex items-center gap-1">行距
               <Input id="bn-lineh" type="number" min="0.5" max="5" step="0.1" v-model.number="cur.lineH" class="h-8 w-[60px]"
                 @change="clampNum('lineH', 0.5, 5, 1.5)" /> 倍</Label>
             <Label class="flex items-center gap-1" title="名称与日期共用：高度不变，只横向拉伸/压缩；<100% 文字瘦长，>100% 扁宽">横向缩放
-              <Input id="bn-scalex" type="number" min="30" max="300" step="5" :model-value="cur.scaleX ?? 100" class="h-8 w-[60px]"
+              <Input id="bn-scalex" type="number" min="30" max="300" step="5" :model-value="cur.scaleX ?? 80" class="h-8 w-[60px]"
                 @update:model-value="(v: string | number) => { cur.scaleX = Number(v); commit() }"
-                @change="clampNum('scaleX', 30, 300, 100)" /> %</Label>
+                @change="clampNum('scaleX', 30, 300, 80)" /> %</Label>
           </div>
           <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             <Label class="flex items-center gap-1">名称字体

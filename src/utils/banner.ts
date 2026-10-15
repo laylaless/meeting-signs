@@ -64,9 +64,9 @@ export function bnRenderStage(el: HTMLElement, b: Banner) {
   el.style.background = b.bg
   el.innerHTML = ''
   const fam = bnFont(b)   // 完整回退串（每项自带引号），不能再整体包引号，否则会被解析成一个非法字体名
-  const sp = (b.spacing == null ? 3 : b.spacing) * 4 / 3 * k
+  const sp = (b.spacing == null ? 0 : b.spacing) * 4 / 3 * k
   const lh = String(b.lineH == null ? 1.5 : b.lineH)
-  const sx = (b.scaleX == null ? 100 : b.scaleX) / 100   // 横向缩放百分比（竖向不变）
+  const sx = (b.scaleX == null ? 80 : b.scaleX) / 100   // 横向缩放百分比（竖向不变；默认 80）
   const t = document.createElement('pre')
   t.className = 'bn-title'
   t.style.cssText = `font-family:${fam};color:${b.fg};font-size:${(b.titleSize * 4 / 3 * k).toFixed(2)}px;text-shadow:${bnShadowCss(b, k)};transform:translateY(${((b.titleOff || 0) * 4 / 3 * k).toFixed(1)}px);letter-spacing:${sp.toFixed(2)}px;line-height:${lh}`

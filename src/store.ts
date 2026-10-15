@@ -11,7 +11,7 @@ export function defaultBanner(titleSize?: number, dateSize?: number): Banner {
     title: 'XX街道工作会议',
     date: `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`,
     bg: '#A52615', fg: '#FFFF00', titleSize: titleSize || 32, dateSize: dateSize || 24,
-    font: 'zhongsong', customFont: '', titleOff: 0, dateOff: 0, spacing: 3, lineH: 1.5, scaleX: 100,
+    font: 'zhongsong', customFont: '', titleOff: 0, dateOff: 0, spacing: 0, lineH: 1.5, scaleX: 80,
     shadow: { color: '#000000', opacity: 60, angle: 45, dist: 8, blur: 3 },
   }
 }
