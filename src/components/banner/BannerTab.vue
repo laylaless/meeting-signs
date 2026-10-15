@@ -160,9 +160,9 @@ function onPreviewPointercancel() { drag = null; tipVisible.value = false }
             <Label class="flex items-center gap-1">日期字号
               <Input id="bn-size-date" type="number" min="8" max="300" v-model.number="cur.dateSize" class="h-8 w-[60px]"
                 @change="clampNum('dateSize', 8, 300, 24)" /> 号</Label>
-            <Label class="flex items-center gap-1">字间距
-              <Input id="bn-spacing" type="number" min="0" max="100" step="0.5" v-model.number="cur.spacing" class="h-8 w-[60px]"
-                @change="clampNum('spacing', 0, 100, 3)" /> pt</Label>
+            <Label class="flex items-center gap-1" title="字与字的间距：正数拉开、负数收紧（负值时字会叠近）">字间距
+              <Input id="bn-spacing" type="number" min="-50" max="100" step="0.5" v-model.number="cur.spacing" class="h-8 w-[60px]"
+                @change="clampNum('spacing', -50, 100, 3)" /> pt</Label>
             <Label class="flex items-center gap-1">行距
               <Input id="bn-lineh" type="number" min="0.5" max="5" step="0.1" v-model.number="cur.lineH" class="h-8 w-[60px]"
                 @change="clampNum('lineH', 0.5, 5, 1.5)" /> 倍</Label>
