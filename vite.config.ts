@@ -1,3 +1,4 @@
+import { copyFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -25,25 +26,37 @@ export default defineConfig({
     },
     viteStaticCopy({
       targets: [
-        // 旧版单文件应用与其依赖，原样随产物发布：根 URL 仍是旧版，/index3.html 是新版
-        { src: 'index.html', dest: '.' },
+        // 旧版单文件应用（v2 / v1 存档）与其依赖，原样随产物发布：根 URL 是新版，/index_v2.html、/index_v1.html 是存档
+        { src: 'index_v2.html', dest: '.' },
         { src: 'index_v1.html', dest: '.' },
         { src: 'fonts', dest: '.' },
         { src: 'UPDATE.md', dest: '.' },
       ],
     }),
+    // v0.3.0~0.3.5 期间新版入口是 /index3.html，对外分享过的链接不能断：
+    // 构建完成后把入口复制一份作别名，/index3.html 与根路径打开的都是新版
+    {
+      name: 'index3-alias-backcompat',
+      apply: 'build',
+      closeBundle() {
+        copyFileSync(
+          fileURLToPath(new URL('./dist/index.html', import.meta.url)),
+          fileURLToPath(new URL('./dist/index3.html', import.meta.url)),
+        )
+      },
+    },
   ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  // 入口显式只指向 index3.html，避免把根目录旧版 index.html 识别为待打包入口；
+  // 入口即根目录 index.html（自 v0.3.6 起新版为主入口；旧版存档 index_v2.html 不参与打包）；
   // 输出 IIFE 单脚本（经典 <script>，无 CORS 限制）：file:// 双击离线打开 dist 也能用
   build: {
     rollupOptions: {
       input: {
-        index3: fileURLToPath(new URL('./index3.html', import.meta.url)),
+        index: fileURLToPath(new URL('./index.html', import.meta.url)),
       },
       output: {
         format: 'iife',
