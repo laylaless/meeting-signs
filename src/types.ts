@@ -86,6 +86,7 @@ export interface Banner {
   dateOff: number
   spacing: number
   lineH: number
+  scaleX?: number // 横向缩放百分比（竖向不变，<100 瘦长、>100 扁宽；旧数据缺省视为 100）
   shadow: BannerShadow
 }
 

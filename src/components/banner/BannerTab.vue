@@ -58,7 +58,7 @@ function addBanner() {
 
 /* ---- 编辑器提交（clamp 后保存；预览由 watcher 重绘） ---- */
 function commit() { store.save() }
-function clampNum(key: 'titleSize' | 'dateSize' | 'spacing' | 'lineH', min: number, max: number, fb: number) {
+function clampNum(key: 'titleSize' | 'dateSize' | 'spacing' | 'lineH' | 'scaleX', min: number, max: number, fb: number) {
   cur.value[key] = clamp(Number(cur.value[key]) || fb, min, max)
   store.save()
 }
@@ -166,6 +166,10 @@ function onPreviewPointercancel() { drag = null; tipVisible.value = false }
             <Label class="flex items-center gap-1">行距
               <Input id="bn-lineh" type="number" min="0.5" max="5" step="0.1" v-model.number="cur.lineH" class="h-8 w-[60px]"
                 @change="clampNum('lineH', 0.5, 5, 1.5)" /> 倍</Label>
+            <Label class="flex items-center gap-1" title="名称与日期共用：高度不变，只横向拉伸/压缩；<100% 文字瘦长，>100% 扁宽">横向缩放
+              <Input id="bn-scalex" type="number" min="30" max="300" step="5" :model-value="cur.scaleX ?? 100" class="h-8 w-[60px]"
+                @update:model-value="(v: string | number) => { cur.scaleX = Number(v); commit() }"
+                @change="clampNum('scaleX', 30, 300, 100)" /> %</Label>
           </div>
           <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             <Label class="flex items-center gap-1">名称字体

@@ -50,14 +50,17 @@ export function bnRenderStage(el: HTMLElement, b: Banner) {
   const fam = bnFont(b)   // 完整回退串（每项自带引号），不能再整体包引号，否则会被解析成一个非法字体名
   const sp = (b.spacing == null ? 3 : b.spacing) * 4 / 3 * k
   const lh = String(b.lineH == null ? 1.5 : b.lineH)
+  // 横向缩放（竖向不变）：元素全宽居中，绕中心 scaleX，文字仍水平居中；默认 100 不输出，保持 transform 纯 translateY
+  const sx = (b.scaleX == null ? 100 : b.scaleX) / 100
+  const sxPart = sx === 1 ? '' : ` scaleX(${sx})`
   const t = document.createElement('pre')
   t.className = 'bn-title'
   t.textContent = b.title || ''
-  t.style.cssText = `font-family:${fam};color:${b.fg};font-size:${(b.titleSize * 4 / 3 * k).toFixed(2)}px;text-shadow:${bnShadowCss(b, k)};transform:translateY(${((b.titleOff || 0) * 4 / 3 * k).toFixed(1)}px);letter-spacing:${sp.toFixed(2)}px;line-height:${lh}`
+  t.style.cssText = `font-family:${fam};color:${b.fg};font-size:${(b.titleSize * 4 / 3 * k).toFixed(2)}px;text-shadow:${bnShadowCss(b, k)};transform:translateY(${((b.titleOff || 0) * 4 / 3 * k).toFixed(1)}px)${sxPart};letter-spacing:${sp.toFixed(2)}px;line-height:${lh}`
   el.appendChild(t)
   const d = document.createElement('div')
   d.className = 'bn-date'
   d.textContent = isoToCN(b.date)
-  d.style.cssText = `font-family:${fam};color:${b.fg};font-size:${(b.dateSize * 4 / 3 * k).toFixed(2)}px;text-shadow:${bnShadowCss(b, k)};transform:translateY(${((b.dateOff || 0) * 4 / 3 * k).toFixed(1)}px);letter-spacing:${sp.toFixed(2)}px;line-height:${lh}`
+  d.style.cssText = `font-family:${fam};color:${b.fg};font-size:${(b.dateSize * 4 / 3 * k).toFixed(2)}px;text-shadow:${bnShadowCss(b, k)};transform:translateY(${((b.dateOff || 0) * 4 / 3 * k).toFixed(1)}px)${sxPart};letter-spacing:${sp.toFixed(2)}px;line-height:${lh}`
   el.appendChild(d)
 }
