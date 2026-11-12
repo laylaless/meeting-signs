@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { clamp } from '@/utils/misc'
-import { bnRenderStage, dateToISO, hexNorm } from '@/utils/banner'
+import { bnRenderStage, dateToISO, exportBannerPng, hexNorm } from '@/utils/banner'
 import { useAppStore } from '@/store'
 import { requestBannerFullscreen } from './bn-full'
 
@@ -64,6 +64,14 @@ function clampNum(key: 'titleSize' | 'dateSize' | 'spacing' | 'lineH' | 'scaleX'
 }
 function setBg(hex: string) { cur.value.bg = hexNorm(hex, cur.value.bg); store.save() }
 function setFg(hex: string) { cur.value.fg = hexNorm(hex, cur.value.fg); store.save() }
+
+/* ---- 导出 PNG（离屏 Canvas 重绘，与预览/全屏同参数） ---- */
+function exportPng() {
+  try {
+    exportBannerPng(cur.value, r43.value)
+    toast.success('已导出 PNG 图片（2160 高清）')
+  } catch { toast.error('导出失败，请重试') }
+}
 
 /* ---- 预览画面里：名称 / 日期支持上下拖动（左右锁定），双击复位；拖动时显示距上/下边缘的百分比 ---- */
 let drag: { key: 'titleOff' | 'dateOff'; startY: number; start: number } | null = null
@@ -245,6 +253,7 @@ function onPreviewPointercancel() { drag = null; tipVisible.value = false }
           </div>
           <div class="flex flex-wrap items-center gap-2 text-[13px]">
             <Button id="btn-bn-full" @click="requestBannerFullscreen()">⛶ 全屏显示</Button>
+            <Button id="btn-bn-export" variant="outline" @click="exportPng">📥 导出图片</Button>
             <span class="flex items-center gap-1">画面比例
               <button id="bn-r169" class="bn-ratio" :class="{ active: !r43 }" title="宽高比 16:9"
                 @click="store.banners.ratio = '16-9'; store.save()">16:9</button>
