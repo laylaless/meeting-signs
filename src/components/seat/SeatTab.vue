@@ -62,12 +62,14 @@ function drawSeatBox(c: CanvasRenderingContext2D, s: SeatBox, no?: number) {
   c.strokeStyle = dis ? '#bbb' : (v.selSeat === s.key ? '#1a66ff' : '#333')
   c.lineWidth = v.selSeat === s.key && !dis ? .5 : .25
   c.strokeRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h)
-  if (p) {   // 名字随框宽缩放
+  if (p) {   // 名字随框宽缩放；翻转姓名 = 文字旋转 180°（倒置），框与座位方向不变
     let fs = s.h * .62
     const name = p.name.length === 2 ? p.name[0] + ' ' + p.name[1] : p.name
     c.font = `${fs}px "SimHei","Heiti SC","PingFang SC",sans-serif`
     while (c.measureText(name).width > s.w - 3 && fs > 4) { fs -= .5; c.font = `${fs}px "SimHei","Heiti SC","PingFang SC",sans-serif` }
-    c.fillStyle = '#111'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, s.x, s.y + .3)
+    c.fillStyle = '#111'; c.textAlign = 'center'; c.textBaseline = 'middle'
+    if (v.flipNames) { c.save(); c.translate(s.x, s.y + .3); c.rotate(Math.PI); c.fillText(name, 0, 0); c.restore() }
+    else c.fillText(name, s.x, s.y + .3)
   }
   if (store.venue.showNo && no && !dis) {   // 礼宾序号：座位上缘小字（禁用座不显示）
     c.font = '3.6px sans-serif'; c.fillStyle = '#1a66ff'; c.textAlign = 'center'; c.textBaseline = 'bottom'
@@ -447,6 +449,11 @@ provide('seatApi', {
                 @change="store.save(); renderSeat()">
               礼宾序号
             </Label>
+            <Label class="flex items-center gap-1.5 font-normal">
+              <input type="checkbox" id="seat-flip-names" v-model="store.venue.flipNames" class="size-4 accent-zinc-900"
+                @change="store.save(); renderSeat()">
+              翻转姓名
+            </Label>
             <span class="w-3"></span>
             <Button id="btn-auto-seat" size="sm" @click="autoSeat">⚡ 按名单顺序一键排座</Button>
             <Button id="btn-clear-seat" variant="outline" size="sm" @click="clearSeat">清空座位</Button>
@@ -457,7 +464,8 @@ provide('seatApi', {
             桌型三种：长条桌（对坐）、圆桌、主席台。<b>拖动桌子</b>调整位置，选中桌子后在「桌子属性」里调座位数 / 旋转 /
             翻转；滚轮缩放，拖空白平移。<br>
             排座：<b>点击名单即自动指派到第一个空位</b>（或先点座位再点名单指定座位）；<b>把右侧名单中的人拖到座位上</b>即指派；<b>拖座位上的人</b>到另一座位为移动（两人互换）；拖到空白处撤销；双击座位清空；<b>右键座位
-            = 禁用/恢复</b>（灰色斜纹座不参与排座）。序号规则：1 号位居中，2 号位在 1 号领导左手侧（图面右侧），依次向两侧展开，可用每桌「翻转」切换朝向。<br>
+            = 禁用/恢复</b>（灰色斜纹座不参与排座）。序号规则：1 号位居中，2 号位在 1 号领导左手侧（图面右侧），依次向两侧展开，可用每桌「翻转」切换朝向。「翻转姓名」勾选后全部姓名倒转
+            180° 显示（打印示意图 / 导出 PNG 同步生效）。<br>
             <b>导出/导入备份</b>（页面右上角）：把当前会场布局、排座、名单和会议室库存成文件备用或换电脑使用；导入后自动保存在浏览器里（刷新不丢）。「恢复默认」重置台签/座位设置（名单保留）。
           </p>
         </CardContent>

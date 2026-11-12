@@ -12,7 +12,7 @@ export function exportBackup() {
     people: store.people, nextPid: store.nextPid,
     venue: {
       tables: store.venue.tables, assign: store.venue.assign, disabled: store.venue.disabled,
-      showNo: store.venue.showNo, zoom: store.venue.zoom, view: store.venue.view,
+      showNo: store.venue.showNo, flipNames: store.venue.flipNames === true, zoom: store.venue.zoom, view: store.venue.view,
     },
     banners: store.banners,
     venueLib: loadVenues(),
@@ -50,7 +50,7 @@ export async function importBackupFile(f: File) {
     ...defaultVenue(),
     tables: d.venue.tables, assign: d.venue.assign || {},
     disabled: Array.isArray(d.venue.disabled) ? d.venue.disabled : [],
-    showNo: d.venue.showNo !== false, zoom: d.venue.zoom || 1, view: d.venue.view || { x: 40, y: 30 },
+    showNo: d.venue.showNo !== false, flipNames: d.venue.flipNames === true, zoom: d.venue.zoom || 1, view: d.venue.view || { x: 40, y: 30 },
   }
   store.sign.excluded = []
   // 会标：随文件恢复（旧文件无此字段则不动本机会标）

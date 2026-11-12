@@ -21,7 +21,7 @@ export function defaultSign(): SignConfig {
 }
 
 export function defaultVenue(): VenueState {
-  return { tables: [], assign: {}, disabled: [], sel: null, selSeat: null, showNo: true, zoom: 1, view: { x: 40, y: 30 } }
+  return { tables: [], assign: {}, disabled: [], sel: null, selSeat: null, showNo: true, flipNames: false, zoom: 1, view: { x: 40, y: 30 } }
 }
 
 export function defaultBanners(): BannersState {

@@ -128,11 +128,13 @@
 .std-frame::before { left: 0 }
 .std-frame::after { right: 0 }
 
-/* 190×178 / 琴川195 台签纸：纸张即台签，不画对折示意线 */
+/* 190×178 / 琴川195 台签纸：纸张即台签，不画对折示意线；边框线白色（打印不可见，仅撑布局用） */
 .std-frame.nofold::before,
 .std-frame.nofold::after {
   content: none
 }
+
+.std-frame.nofold { border-color: #fff }
 
 .std-half .inner {
   display: flex;

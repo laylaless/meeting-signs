@@ -60,6 +60,7 @@ export interface VenueState {
   sel: string | null
   selSeat: string | null
   showNo: boolean
+  flipNames?: boolean // 姓名显示翻转 180°（旧数据缺省视为 false）
   zoom: number
   view: { x: number; y: number }
 }
@@ -117,6 +118,7 @@ export interface VenueBackup {
     assign: Record<string, string>
     disabled: string[]
     showNo: boolean
+    flipNames?: boolean
     zoom: number
     view: { x: number; y: number }
   }
