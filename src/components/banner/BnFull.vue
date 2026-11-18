@@ -11,6 +11,7 @@ const stageEl = ref<HTMLElement>()
 let idx = 0
 let hintTimer: ReturnType<typeof setTimeout> | null = null
 let wheelTs = 0
+let ro: ResizeObserver | null = null
 
 function show(showHint: boolean) {
   if (!stageEl.value) return
@@ -81,11 +82,18 @@ onMounted(() => {
   document.addEventListener('fullscreenchange', onFullscreenchange)
   document.addEventListener('keydown', onKeydown)
   fullEl.value?.addEventListener('wheel', onWheel, { passive: false })
+  /* 进入全屏的瞬间布局尺寸可能还是旧窗口大小（macOS 全屏动画延迟、fullscreenchange 早于尺寸稳定），
+     首帧会按旧高度渲染导致字号不对；监听画面实际尺寸，变化后按最终尺寸重绘（同预览的做法） */
+  ro = new ResizeObserver(() => {
+    if (document.fullscreenElement === fullEl.value || fallbackActive()) show(false)
+  })
+  if (stageEl.value) ro.observe(stageEl.value)
 })
 onUnmounted(() => {
   document.removeEventListener('fullscreenchange', onFullscreenchange)
   document.removeEventListener('keydown', onKeydown)
   fullEl.value?.removeEventListener('wheel', onWheel)
+  ro?.disconnect()
 })
 </script>
 

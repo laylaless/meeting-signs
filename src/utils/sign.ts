@@ -9,7 +9,7 @@ export function signFont(cfg: SignConfig) {
 }
 
 export function autoFontSize(len: number, mode: string, perPage: number) {
-  if (mode === 'standard' || mode === 'paper190' || mode === 'qinchuan') return 155   // 固定 155pt，超宽自动 scaleX 横向压缩，不换行
+  if (mode === 'standard' || mode === 'paper190' || mode === 'qinchuan' || mode === 'lianmengcun') return 155   // 固定 155pt，超宽自动 scaleX 横向压缩，不换行
   if (mode === 'table200x120') return 96
   if (mode === 'seatcard') return Math.min(130, Math.round(567 / Math.max(len, 1)))   // 竖排：≤4 字 130pt，字多按 200mm 可用高度均分
   if (mode === 'fold') return len <= 2 ? 250 : len === 3 ? 220 : len === 4 ? 180 : len === 5 ? 150 : len === 6 ? 125 : 105
@@ -34,6 +34,7 @@ export function buildSignHTML(cfg: SignConfig, people: Person[]): string {
     if (cfg.mode === 'standard') return `<div class="sheet"><div class="std-frame"><div class="std-half rev">${inner}</div><div class="std-half">${inner}</div></div></div>`
     if (cfg.mode === 'paper190') return `<div class="sheet" style="width:190mm;height:178mm"><div class="std-frame nofold" style="width:100%;height:100%"><div class="std-half rev">${inner}</div><div class="std-half">${inner}</div></div></div>`
     if (cfg.mode === 'qinchuan') return `<div class="sheet" style="width:195mm;height:175mm"><div class="std-frame nofold" style="width:100%;height:100%"><div class="std-half rev">${inner}</div><div class="std-half">${inner}</div></div></div>`
+    if (cfg.mode === 'lianmengcun') return `<div class="sheet"><div class="std-frame" style="width:200mm;height:180mm"><div class="std-half rev" style="height:90mm">${inner}</div><div class="std-half" style="height:90mm">${inner}</div></div></div>`
     if (cfg.mode === 'table200x120') return `<div class="sheet t200-card" style="width:120mm;height:200mm"><div class="t200-blank"></div><div class="t200-name rev">${inner}</div><div class="t200-name">${inner}</div><div class="t200-blank"></div></div>`
     if (cfg.mode === 'fold') return `<div class="sheet"><div class="fold-half rev">${inner}</div><div class="fold-half">${inner}</div></div>`
     const rowH = (296 / cfg.perPage).toFixed(2), halfH = (148 / cfg.perPage).toFixed(2)

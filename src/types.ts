@@ -10,6 +10,7 @@ export type SignMode =
   | 'standard'
   | 'paper190'
   | 'qinchuan'
+  | 'lianmengcun'
   | 'table200x120'
   | 'seatcard'
   | 'fold'
